@@ -89,7 +89,7 @@ export default function ProductPurchasePanel({ product, variants }) {
   );
 
   const buildCartItem = () => ({
-    id: selected.id,
+    variantId: selected.id,
     productId: product.id,
     name: product.name,
     variantName: `${selected.variant_name} (${selected.bottle_type === "plastic" ? "Plastic" : "Glass"})`,
