@@ -3,7 +3,7 @@ import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import RegisterForm from "./_components/RegisterForm";
 
-export const metadata = { title: "Create Account" };
+export const metadata = { title: "Create Account", robots: { index: false, follow: false } };
 
 export default function RegisterPage() {
   return (

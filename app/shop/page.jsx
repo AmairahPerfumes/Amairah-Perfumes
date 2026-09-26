@@ -9,7 +9,18 @@ import SortSelect from "@/components/shop/SortSelect";
 import { getActiveCategories } from "@/actions/categories";
 import { getProducts } from "@/actions/products";
 
-export const metadata = { title: "Shop All Fragrances - Amairah Perfumes" };
+export const metadata = {
+  title: "Shop All Fragrances",
+  description:
+    "Browse the full Amairah Perfumes collection — attars, extrait-grade oils and eau de parfums, hand-poured in small batches.",
+  alternates: { canonical: "/shop" },
+  openGraph: {
+    url: "/shop",
+    title: "Shop All Fragrances — Amairah Perfumes",
+    description:
+      "Browse the full Amairah Perfumes collection — attars, extrait-grade oils and eau de parfums, hand-poured in small batches.",
+  },
+};
 
 const PAGE_SIZE = 20;
 

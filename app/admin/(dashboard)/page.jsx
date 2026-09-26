@@ -215,7 +215,7 @@ export default async function AdminDashboardPage() {
           {stats.lowStock.length === 0 ? (
             <p className="py-6 text-center text-sm text-ivory/40">Everything is well stocked.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
               {stats.lowStock.map((v) => (
                 <li
                   key={v.id}

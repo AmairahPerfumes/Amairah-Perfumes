@@ -7,7 +7,7 @@ import Reveal from "@/components/Reveal";
 import { createClient } from "@/lib/supabase/server";
 import DelhiveryTracking from "./_components/DelhiveryTracking";
 
-export const metadata = { title: "Order Details" };
+export const metadata = { title: "Order Details", robots: { index: false, follow: false } };
 
 const STATUS_STYLES = {
   pending: "text-ivory/60 bg-ivory/5 border-ivory/10",
@@ -80,6 +80,17 @@ export default async function OrderDetailPage({ params }) {
           </Reveal>
 
           <div className="space-y-6">
+            {/* Shipment Tracking */}
+            {order.tracking_number && (
+              <DelhiveryTracking
+                orderId={order.id}
+                trackingNumber={order.tracking_number}
+                trackingUrl={order.tracking_url}
+                courierName={order.courier_name}
+                cachedStatus={order.shipment_status}
+              />
+            )}
+
             {/* Items */}
             <Reveal className="card-panel p-6 sm:p-8 hover:border-gold-400/20 transition-all duration-300">
               <div className="flex items-center gap-3 mb-6">
@@ -142,17 +153,6 @@ export default async function OrderDetailPage({ params }) {
                 </div>
               </div>
             </Reveal>
-
-            {/* Shipment Tracking */}
-            {order.tracking_number && (
-              <DelhiveryTracking
-                orderId={order.id}
-                trackingNumber={order.tracking_number}
-                trackingUrl={order.tracking_url}
-                courierName={order.courier_name}
-                cachedStatus={order.shipment_status}
-              />
-            )}
 
             {/* Shipping Address */}
             {address && (

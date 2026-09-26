@@ -2,7 +2,7 @@ import PolicyLayout from "@/components/PolicyLayout";
 import { BRAND } from "@/lib/constants";
 import { Truck } from "lucide-react";
 
-export const metadata = { title: "Shipping Policy" };
+export const metadata = { title: "Shipping Policy", alternates: { canonical: "/policies/shipping" } };
 
 export default function ShippingPolicyPage() {
   return (

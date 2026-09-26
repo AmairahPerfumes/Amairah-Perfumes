@@ -9,7 +9,7 @@ import { getBundleSettings } from "@/actions/bundle";
 import { isCodEnabled, isOnlinePaymentEnabled } from "@/actions/settings";
 import { ShieldCheck } from "lucide-react";
 
-export const metadata = { title: "Checkout" };
+export const metadata = { title: "Checkout", robots: { index: false, follow: false } };
 
 export default async function CheckoutPage() {
   const [razorpayConfigured, shipping, quantityDiscount, bundleSettings, codEnabled, onlinePaymentEnabled] = await Promise.all([

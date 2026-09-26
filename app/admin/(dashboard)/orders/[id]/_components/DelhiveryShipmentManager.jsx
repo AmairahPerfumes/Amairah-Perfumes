@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Truck, RefreshCw, PackageCheck, ExternalLink, X } from "lucide-react";
+import { Truck, RefreshCw, PackageCheck, ExternalLink, X, History } from "lucide-react";
+import ShipmentStatusPill from "@/components/ShipmentStatusPill";
+import { scanTone, formatScanTime } from "@/lib/shipmentTone";
 
 const inputClass =
   "w-full rounded-xl border border-gold-400/10 bg-ink/40 px-4 py-2.5 text-sm text-ivory transition-colors duration-300 focus:border-gold-400/40 focus:outline-none focus:ring-1 focus:ring-gold-400/20 hover:border-gold-400/20";
@@ -123,6 +125,23 @@ export default function DelhiveryShipmentManager({ order }) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [tracking, setTracking] = useState(null);
+  const [loading, setLoading] = useState(Boolean(order.tracking_number));
+
+  // Auto-fetch live tracking on load, same as the customer-facing tracking
+  // card — without this, admins had to click "Refresh" manually to see
+  // anything beyond the last cached status.
+  useEffect(() => {
+    if (!order.tracking_number) return;
+    let cancelled = false;
+    (async () => {
+      const result = await postJson({ action: "track_shipment", payload: { orderId: order.id } });
+      if (!cancelled && result.success) setTracking(result.tracking);
+      if (!cancelled) setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id, order.tracking_number]);
 
   const handleTrackNow = async () => {
     setBusy("track");
@@ -135,36 +154,38 @@ export default function DelhiveryShipmentManager({ order }) {
   };
 
   const scans = tracking?.ShipmentData?.[0]?.Shipment?.Scans || [];
-  const liveStatus = tracking?.ShipmentData?.[0]?.Shipment?.Status?.Status;
+  const liveStatus = tracking?.ShipmentData?.[0]?.Shipment?.Status?.Status || order.shipment_status;
 
   if (order.tracking_number) {
     return (
-      <div className="mt-5 border-t border-gold-400/10 pt-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <PackageCheck className="h-4 w-4 text-gold-300" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ivory/40">Shipment</h3>
-        </div>
-        <div className="text-sm text-ivory/70">
-          <span className="text-ivory/40">Courier:</span> {order.courier_name || "Delhivery"}
-        </div>
-        <div className="text-sm">
-          <span className="text-ivory/40">Waybill:</span>{" "}
-          <span className="font-mono text-ivory select-all">{order.tracking_number}</span>
-        </div>
-        {order.shipment_status && (
-          <div className="text-sm text-ivory/70">
-            <span className="text-ivory/40">Last Status:</span> {order.shipment_status}
+      <div className="mt-5 border-t border-gold-400/10 pt-5 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <PackageCheck className="h-4 w-4 text-gold-300" />
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-ivory/40">Shipment</h3>
           </div>
-        )}
+          {liveStatus && <ShipmentStatusPill status={liveStatus} />}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-gold-400/10 bg-gradient-to-b from-white/[0.03] to-transparent p-3.5 text-sm">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-ivory/35">Courier</p>
+            <p className="mt-0.5 text-ivory/85">{order.courier_name || "Delhivery"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-ivory/35">Waybill</p>
+            <p className="mt-0.5 font-mono text-ivory/85 select-all">{order.tracking_number}</p>
+          </div>
+        </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-2 gap-2">
           <a
             href={order.tracking_url || `https://www.delhivery.com/track/package/${order.tracking_number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-center text-xs font-semibold text-gold-200 hover:border-gold-300/40 hover:bg-gold-400/10"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-center text-xs font-semibold text-gold-200 transition-colors duration-300 hover:border-gold-300/40 hover:bg-gold-400/10"
           >
             <ExternalLink className="h-3.5 w-3.5 shrink-0" /> Track
           </a>
@@ -172,34 +193,51 @@ export default function DelhiveryShipmentManager({ order }) {
             type="button"
             onClick={handleTrackNow}
             disabled={busy === "track"}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-center text-xs font-semibold text-gold-200 hover:border-gold-300/40 hover:bg-gold-400/10 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-center text-xs font-semibold text-gold-200 transition-colors duration-300 hover:border-gold-300/40 hover:bg-gold-400/10 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${busy === "track" ? "animate-spin" : ""}`} /> {busy === "track" ? "Checking…" : "Refresh"}
           </button>
         </div>
 
-        {scans.length > 0 && (
-          <div className="mt-3 space-y-3 rounded-xl border border-gold-400/10 bg-ink/30 p-3 text-xs">
-            {liveStatus && (
-              <p className="flex items-center justify-between border-b border-gold-400/10 pb-2 font-semibold capitalize text-gold-300">
-                <span>Current Status</span>
-                <span>{liveStatus}</span>
-              </p>
-            )}
-            <div className="space-y-2.5">
-              {scans.map((scan, i) => {
+        {loading && (
+          <p className="text-sm text-ivory/40">Fetching latest status…</p>
+        )}
+
+        {!loading && scans.length > 0 && (
+          <div className="rounded-xl border border-gold-400/10 bg-gradient-to-b from-white/[0.03] to-transparent p-3.5 sm:p-4">
+            <p className="mb-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ivory/35">
+              <History className="h-3.5 w-3.5" /> Tracking History
+            </p>
+            <div className="max-h-72 overflow-y-auto pl-1 pr-1 pt-3">
+              {[...scans].reverse().map((scan, i, arr) => {
                 const sd = scan.ScanDetail || {};
+                const isFirst = i === 0;
+                const isLast = i === arr.length - 1;
+                const tone = scanTone(sd.Scan);
+                const Icon = tone.Icon;
                 return (
-                  <div key={i} className="text-ivory/60">
-                    <p className="text-ivory/80">
-                      {sd.Scan}
-                      {sd.ScannedLocation && <span className="text-ivory/50"> — {sd.ScannedLocation}</span>}
-                    </p>
-                    {sd.StatusDateTime && (
-                      <p className="mt-0.5 text-[11px] text-ivory/35">
-                        {new Date(sd.StatusDateTime).toLocaleString("en-IN")}
-                      </p>
+                  <div key={i} className="relative flex gap-3.5 pb-5 last:pb-0.5">
+                    {!isLast && (
+                      <span className="absolute left-[10.5px] top-6 h-[calc(100%-1.25rem)] w-px bg-gradient-to-b from-gold-400/20 to-gold-400/5" />
                     )}
+                    <span
+                      className={`relative z-10 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full ${tone.circle} ${
+                        isFirst ? "shadow-[0_0_12px_currentColor] scale-110" : "opacity-80"
+                      }`}
+                    >
+                      <Icon className="h-3 w-3" strokeWidth={2.5} />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className={`text-sm font-semibold ${isFirst ? tone.text : "text-ivory/70"}`}>
+                        {sd.Scan}
+                      </p>
+                      {sd.ScannedLocation && (
+                        <p className="mt-0.5 text-xs text-ivory/40">{sd.ScannedLocation}</p>
+                      )}
+                      {sd.StatusDateTime && (
+                        <p className="mt-0.5 text-xs text-ivory/30">{formatScanTime(sd.StatusDateTime)}</p>
+                      )}
+                    </div>
                   </div>
                 );
               })}

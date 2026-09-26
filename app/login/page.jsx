@@ -3,7 +3,7 @@ import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import LoginForm from "./_components/LoginForm";
 
-export const metadata = { title: "Log In" };
+export const metadata = { title: "Log In", robots: { index: false, follow: false } };
 
 export default function LoginPage() {
   return (

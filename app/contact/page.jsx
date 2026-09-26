@@ -3,8 +3,9 @@ import Footer from "@/components/Footer";
 import ContactContent from "./_components/ContactContent";
 
 export const metadata = {
-  title: "Contact Us | Amairah Perfumes",
+  title: "Contact Us",
   description: "Get in touch with Amairah Perfumes for scent recommendations, gifting options, and order support.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

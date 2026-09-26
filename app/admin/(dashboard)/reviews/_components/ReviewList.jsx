@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, Search } from "lucide-react";
 import StarRating from "@/components/StarRating";
+import FilterSelect from "@/components/admin/FilterSelect";
 import { approveReview, deleteReview } from "@/actions/admin/reviews";
 
 const TABS = [
@@ -16,6 +17,8 @@ export default function ReviewList({ reviews }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState("all");
+  const [search, setSearch] = useState("");
+  const [rating, setRating] = useState("all");
 
   const handleApprove = (id) => {
     startTransition(async () => {
@@ -31,29 +34,72 @@ export default function ReviewList({ reviews }) {
     });
   };
 
-  const filtered = reviews.filter((r) => {
-    if (tab === "pending") return !r.is_approved;
-    if (tab === "approved") return r.is_approved;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return reviews.filter((r) => {
+      if (tab === "pending" && r.is_approved) return false;
+      if (tab === "approved" && !r.is_approved) return false;
+      if (rating !== "all" && r.rating !== Number(rating)) return false;
+      if (term) {
+        const haystack = [r.profiles?.full_name, r.profiles?.email, r.products?.name, r.review_text]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [reviews, tab, rating, search]);
 
   return (
     <div>
-      <div className="mb-5 flex gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors duration-300 ${
-              tab === t.key
-                ? "border-gold-400/30 bg-gold-400/10 text-gold-200"
-                : "border-gold-400/10 text-ivory/40 hover:text-ivory"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors duration-300 ${
+                tab === t.key
+                  ? "border-gold-400/30 bg-gold-400/10 text-gold-200"
+                  : "border-gold-400/10 text-ivory/40 hover:text-ivory"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ivory/30" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search customer, product, review..."
+              className="w-full rounded-xl border border-gold-400/10 bg-ink-soft/40 py-2 pl-9 pr-3 text-sm text-ivory placeholder:text-ivory/30 focus:border-gold-400/30 focus:outline-none sm:w-64"
+            />
+          </div>
+          <FilterSelect
+            value={rating}
+            onChange={(e) => setRating(e.target.value)}
+            className="sm:w-32"
+            options={[
+              { value: "all", label: "All Ratings" },
+              { value: "5", label: "5 Stars" },
+              { value: "4", label: "4 Stars" },
+              { value: "3", label: "3 Stars" },
+              { value: "2", label: "2 Stars" },
+              { value: "1", label: "1 Star" },
+            ]}
+          />
+        </div>
       </div>
+
+      <p className="mb-3 text-xs text-ivory/40">
+        Showing {filtered.length} of {reviews.length} review{reviews.length === 1 ? "" : "s"}.
+      </p>
 
       {filtered.length === 0 ? (
         <p className="rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 py-12 text-center text-sm text-ivory/40 backdrop-blur-md">

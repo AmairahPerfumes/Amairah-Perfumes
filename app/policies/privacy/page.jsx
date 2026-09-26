@@ -2,7 +2,7 @@ import PolicyLayout from "@/components/PolicyLayout";
 import { BRAND } from "@/lib/constants";
 import { ShieldCheck } from "lucide-react";
 
-export const metadata = { title: "Privacy Policy" };
+export const metadata = { title: "Privacy Policy", alternates: { canonical: "/policies/privacy" } };
 
 export default function PrivacyPolicyPage() {
   return (

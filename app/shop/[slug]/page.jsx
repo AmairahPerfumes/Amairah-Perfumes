@@ -22,9 +22,31 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const product = await getCachedProduct(slug);
   if (!product) return {};
+
+  const titleText = product.seo_title || product.name;
+  const description = product.seo_description || product.short_description || undefined;
+  const image = product.featured_image_url || product.images?.[0]?.image_url;
+
   return {
-    title: `${product.seo_title || product.name} - Amairah Perfumes`,
-    description: product.seo_description || product.short_description || undefined,
+    // A custom seo_title from admin is treated as the full, final title tag
+    // (skips the root layout's "%s — Amairah Perfumes" template so it isn't
+    // suffixed twice); the product.name fallback still gets the brand suffix.
+    title: product.seo_title ? { absolute: titleText } : titleText,
+    description,
+    alternates: { canonical: `/shop/${slug}` },
+    openGraph: {
+      url: `/shop/${slug}`,
+      title: titleText,
+      description,
+      type: "website",
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: titleText,
+      description,
+      images: image ? [image] : undefined,
+    },
   };
 }
 
@@ -46,8 +68,64 @@ export default async function ProductDetailPage({ params }) {
   const safeProduct = JSON.parse(JSON.stringify(product));
   const safeRelatedProducts = JSON.parse(JSON.stringify(relatedProducts));
 
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.amairahperfumes.com";
+  const cheapestVariant = safeProduct.variants?.[0];
+  const inStockAny = safeProduct.variants?.some((v) => v.stock_quantity > 0);
+  const productImages = (safeProduct.images || []).map((img) => img.image_url).filter(Boolean);
+  if (safeProduct.featured_image_url) productImages.unshift(safeProduct.featured_image_url);
+
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.short_description || product.description || undefined,
+    image: productImages.length > 0 ? productImages : undefined,
+    sku: cheapestVariant?.id,
+    brand: { "@type": "Brand", name: "Amairah Perfumes" },
+    ...(product.review_count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: product.average_rating,
+            reviewCount: product.review_count,
+          },
+        }
+      : {}),
+    ...(cheapestVariant
+      ? {
+          offers: {
+            "@type": "Offer",
+            url: `${SITE_URL}/shop/${slug}`,
+            priceCurrency: "INR",
+            price: cheapestVariant.price,
+            availability: inStockAny
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+          },
+        }
+      : {}),
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+      { "@type": "ListItem", position: 3, name: product.name, item: `${SITE_URL}/shop/${slug}` },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <SiteHeader />
       <main className="min-h-screen bg-[#0b0a0a] text-ivory overflow-hidden pb-16 sm:pb-24 pt-6 sm:pt-10">
 

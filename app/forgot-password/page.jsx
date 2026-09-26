@@ -3,7 +3,7 @@ import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import ForgotPasswordForm from "./_components/ForgotPasswordForm";
 
-export const metadata = { title: "Forgot Password" };
+export const metadata = { title: "Forgot Password", robots: { index: false, follow: false } };
 
 export default function ForgotPasswordPage() {
   return (

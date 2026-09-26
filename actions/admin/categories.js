@@ -16,7 +16,7 @@ export async function getAllCategoriesAdmin() {
   const supabase = createAdminClient();
   const [{ data: categories }, { data: products }] = await Promise.all([
     supabase.from("categories").select("*").order("sort_order", { ascending: true }),
-    supabase.from("products").select("category_id"),
+    supabase.from("products").select("category_id").eq("show_in_shop", true),
   ]);
 
   const counts = {};

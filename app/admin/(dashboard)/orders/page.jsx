@@ -1,16 +1,8 @@
-import Link from "next/link";
-import { ShoppingCart, Clock, Truck, XCircle, Eye } from "lucide-react";
+import { ShoppingCart, Clock, Truck, XCircle } from "lucide-react";
 import { getAllOrdersAdmin } from "@/actions/admin/orders";
+import OrdersList from "./_components/OrdersList";
 
 export const metadata = { title: "Orders" };
-
-const STATUS_STYLES = {
-  pending: "bg-ivory/10 text-ivory/70 border-ivory/15",
-  processing: "bg-gold-400/15 text-gold-200 border-gold-400/20",
-  shipped: "bg-blue-400/15 text-blue-300 border-blue-400/20",
-  delivered: "bg-green-400/15 text-green-300 border-green-400/20",
-  cancelled: "bg-red-400/15 text-red-300 border-red-400/20",
-};
 
 export default async function AdminOrdersPage() {
   const orders = await getAllOrdersAdmin();
@@ -56,96 +48,7 @@ export default async function AdminOrdersPage() {
         ))}
       </div>
 
-      {/* Table (sm and up) */}
-      <div className="hidden overflow-x-auto rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-6 backdrop-blur-md shadow-2xl sm:block md:p-8">
-        {orders.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No orders yet.</p>
-        ) : (
-          <table className="w-full min-w-[720px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gold-400/10 text-xs uppercase tracking-widest text-ivory/40 font-semibold">
-                <th className="pb-4 font-medium pl-2">Order</th>
-                <th className="pb-4 font-medium">Customer</th>
-                <th className="pb-4 font-medium">Date</th>
-                <th className="pb-4 font-medium">Payment</th>
-                <th className="pb-4 font-medium">Total</th>
-                <th className="pb-4 font-medium">Status</th>
-                <th className="pb-4 font-medium pr-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gold-400/5">
-              {orders.map((o) => (
-                <tr key={o.id} className="group/row transition-colors duration-300 hover:bg-white/[0.01]">
-                  <td className="py-4 pr-4 pl-2">
-                    <Link href={`/admin/orders/${o.id}`} className="text-sm font-medium text-ivory group-hover/row:text-gold-200 transition-colors">
-                      {o.order_number}
-                    </Link>
-                  </td>
-                  <td className="py-4 pr-4 text-sm text-ivory/60">{o.profiles?.full_name || o.profiles?.email || "—"}</td>
-                  <td className="py-4 pr-4 text-sm text-ivory/45">
-                    {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </td>
-                  <td className="py-4 pr-4 text-sm capitalize text-ivory/60">
-                    {o.payment_method === "COD" ? "COD" : "Online"} · {o.payment_status}
-                  </td>
-                  <td className="py-4 pr-4 text-sm font-semibold text-ivory">₹{Number(o.total_amount).toLocaleString("en-IN")}</td>
-                  <td className="py-4 pr-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider border capitalize ${STATUS_STYLES[o.order_status] || ""}`}>
-                      {o.order_status}
-                    </span>
-                  </td>
-                  <td className="py-4 pr-2 text-right">
-                    <Link
-                      href={`/admin/orders/${o.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-xs font-semibold text-gold-200 transition-all duration-300 hover:border-gold-300/40 hover:bg-gold-400/10"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> View Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Card List (mobile only) */}
-      <div className="rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-4 backdrop-blur-md shadow-2xl sm:hidden">
-        {orders.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No orders yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {orders.map((o) => (
-              <li key={o.id}>
-                <Link
-                  href={`/admin/orders/${o.id}`}
-                  className="block rounded-2xl border border-gold-400/10 bg-white/[0.02] p-4 transition-colors hover:bg-gold-400/5"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-ivory">{o.order_number}</span>
-                    <span className="text-sm font-semibold text-ivory">₹{Number(o.total_amount).toLocaleString("en-IN")}</span>
-                  </div>
-                  <p className="mt-1 truncate text-sm text-ivory/50">{o.profiles?.full_name || o.profiles?.email || "—"}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider border capitalize ${STATUS_STYLES[o.order_status] || ""}`}>
-                      {o.order_status}
-                    </span>
-                    <span className="rounded-full border border-ivory/10 bg-ivory/5 px-2.5 py-1 text-xs font-semibold capitalize text-ivory/50">
-                      {o.payment_method === "COD" ? "COD" : "Online"} · {o.payment_status}
-                    </span>
-                    <span className="ml-auto text-sm text-ivory/30">
-                      {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                    </span>
-                  </div>
-                  <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gold-300">
-                    <Eye className="h-3.5 w-3.5" /> View Details
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <OrdersList orders={orders} />
     </div>
   );
 }

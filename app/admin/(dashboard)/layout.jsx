@@ -3,7 +3,10 @@ import { AdminSidebarProvider } from "@/context/AdminSidebarContext";
 import AdminSidebar from "@/components/admin/Sidebar";
 import AdminHeader from "@/components/admin/Header";
 
-export const metadata = { title: { template: "%s — Amairah Admin", default: "Admin Dashboard" } };
+export const metadata = {
+  title: { template: "%s — Amairah Admin", default: "Admin Dashboard" },
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminDashboardLayout({ children }) {
   // Identity is already verified by middleware for every route under this

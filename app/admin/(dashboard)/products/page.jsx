@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Plus, Package, CheckCircle2, PackageX, AlertTriangle } from "lucide-react";
 import { getAllProductsAdmin } from "@/actions/admin/products";
-import ProductRow from "./_components/ProductRow";
-import ProductCard from "./_components/ProductCard";
+import ProductsList from "./_components/ProductsList";
 
 export const metadata = { title: "Products" };
 
@@ -58,43 +57,7 @@ export default async function AdminProductsPage() {
         ))}
       </div>
 
-      {/* Table (sm and up) */}
-      <div className="hidden overflow-x-auto rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-6 backdrop-blur-md shadow-2xl sm:block md:p-8">
-        {products.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No products yet — create your first one.</p>
-        ) : (
-          <table className="w-full min-w-[680px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gold-400/10 text-sm uppercase tracking-widest text-ivory/40 font-semibold">
-                <th className="pb-4 font-medium pl-2">Name</th>
-                <th className="pb-4 font-medium">Category</th>
-                <th className="pb-4 font-medium">From</th>
-                <th className="pb-4 font-medium">Stock</th>
-                <th className="pb-4 font-medium">Status</th>
-                <th className="pb-4 font-medium text-right pr-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gold-400/5">
-              {products.map((p) => (
-                <ProductRow key={p.id} product={p} />
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Card List (mobile only) */}
-      <div className="rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-4 backdrop-blur-md shadow-2xl sm:hidden">
-        {products.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No products yet — create your first one.</p>
-        ) : (
-          <ul className="space-y-3">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </ul>
-        )}
-      </div>
+      <ProductsList products={products} />
     </div>
   );
 }

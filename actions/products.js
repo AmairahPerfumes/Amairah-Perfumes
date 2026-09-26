@@ -255,6 +255,7 @@ export async function getProductBySlug(slug) {
         id, name, slug, category_id, is_active, badge, gender,
         average_rating, review_count, short_description, description,
         notes_top, notes_middle, notes_base, featured_image_url,
+        seo_title, seo_description,
         product_images ( id, image_url, sort_order, variant_name ),
         product_variants ( id, variant_name, bottle_type, price, original_price, stock_quantity, is_active ),
         product_faqs ( id, question, answer, display_order )

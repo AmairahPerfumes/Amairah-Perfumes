@@ -6,7 +6,11 @@ import Footer from "@/components/Footer";
 import BundleBuilder from "./_components/BundleBuilder";
 import { getBundleSettings, getBundleEligibleProducts } from "@/actions/bundle";
 
-export const metadata = { title: "Build Your Own Bundle - Amairah Perfumes" };
+export const metadata = {
+  title: "Build Your Own Bundle",
+  description: "Pick your favorite Amairah Perfumes fragrances and build a custom gift set at a special bundle price.",
+  alternates: { canonical: "/bundle" },
+};
 
 export default async function BundlePage() {
   const [settings, products] = await Promise.all([getBundleSettings(), getBundleEligibleProducts()]);

@@ -2,7 +2,7 @@ import PolicyLayout from "@/components/PolicyLayout";
 import { BRAND } from "@/lib/constants";
 import { RefreshCcw } from "lucide-react";
 
-export const metadata = { title: "Refund Policy" };
+export const metadata = { title: "Refund Policy", alternates: { canonical: "/policies/refund" } };
 
 export default function RefundPolicyPage() {
   return (

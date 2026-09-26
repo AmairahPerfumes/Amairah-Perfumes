@@ -5,7 +5,7 @@ import { logout } from "@/actions/auth";
 import AccountTabs from "./_components/AccountTabs";
 import { LogOut } from "lucide-react";
 
-export const metadata = { title: "My Account" };
+export const metadata = { title: "My Account", robots: { index: false, follow: false } };
 
 export default async function AccountPage() {
   const supabase = await createClient();

@@ -25,7 +25,12 @@ import {
   Check,
 } from "lucide-react";
 
-export const metadata = { title: "About Us - Amairah Perfumes" };
+export const metadata = {
+  title: "About Us",
+  description:
+    "Amairah Perfumes crafts hand-poured attars and extrait-grade fragrances in small batches. Learn our story, our process and what makes our scents last.",
+  alternates: { canonical: "/about" },
+};
 
 const STATS = [
   { icon: FlaskConical, value: "100%", label: "IFRA Compliant" },

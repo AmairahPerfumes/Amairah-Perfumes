@@ -25,9 +25,14 @@ const getDashboardStatsCached = unstable_cache(
       { count: unresolvedInquiryCount },
     ] = await Promise.all([
       supabase.from("orders").select("total_amount, payment_status, order_status", { count: "exact" }).or(VISIBLE_ORDERS_FILTER),
-      supabase.from("products").select("id", { count: "exact", head: true }),
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("show_in_shop", true),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
-      supabase.from("product_variants").select("id, variant_name, stock_quantity, products ( name )").lte("stock_quantity", 5).eq("is_active", true),
+      supabase
+        .from("product_variants")
+        .select("id, variant_name, stock_quantity, products!inner ( name, show_in_shop )")
+        .lte("stock_quantity", 5)
+        .eq("is_active", true)
+        .eq("products.show_in_shop", true),
       supabase
         .from("orders")
         .select("id, order_number, total_amount, order_status, created_at")
@@ -72,7 +77,7 @@ const getSidebarBadgeCountsCached = unstable_cache(
 
     const [{ count: pendingOrders }, { count: pendingReviewCount }, { count: unresolvedInquiryCount }] =
       await Promise.all([
-        supabase.from("orders").select("id", { count: "exact", head: true }).eq("order_status", "pending"),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("order_status", "pending").or(VISIBLE_ORDERS_FILTER),
         supabase.from("reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
         supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("is_resolved", false),
       ]);

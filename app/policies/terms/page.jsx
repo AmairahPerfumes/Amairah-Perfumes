@@ -2,7 +2,7 @@ import PolicyLayout from "@/components/PolicyLayout";
 import { BRAND } from "@/lib/constants";
 import { FileText } from "lucide-react";
 
-export const metadata = { title: "Terms of Service" };
+export const metadata = { title: "Terms of Service", alternates: { canonical: "/policies/terms" } };
 
 export default function TermsPage() {
   return (

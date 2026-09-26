@@ -4,7 +4,7 @@ import CartView from "./_components/CartView";
 import { getQuantityDiscountSettings } from "@/actions/admin/quantityDiscount";
 import { getBundleSettings } from "@/actions/bundle";
 
-export const metadata = { title: "Your Bag" };
+export const metadata = { title: "Your Bag", robots: { index: false, follow: false } };
 
 export default async function CartPage() {
   const [quantityDiscount, bundleSettings] = await Promise.all([getQuantityDiscountSettings(), getBundleSettings()]);

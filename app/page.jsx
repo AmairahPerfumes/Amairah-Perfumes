@@ -16,6 +16,19 @@ import { getFeaturedProducts } from "@/actions/products";
 import { getActiveHeroSlides, getActiveTestimonials } from "@/actions/site";
 import { getSiteSettings } from "@/actions/settings";
 
+export const metadata = {
+  title: "Amairah Perfumes — Luxury Attars & Fine Fragrances",
+  description:
+    "Shop hand-poured attars and fine fragrances from Amairah Perfumes — extrait-grade oils, alcohol-free options, made in small batches for lasting scent.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    url: "/",
+    title: "Amairah Perfumes — Luxury Attars & Fine Fragrances",
+    description:
+      "Shop hand-poured attars and fine fragrances from Amairah Perfumes — extrait-grade oils, alcohol-free options, made in small batches for lasting scent.",
+  },
+};
+
 export default async function HomePage() {
   const [categories, featuredProducts, heroSlides, testimonials, settings] =
     await Promise.all([
