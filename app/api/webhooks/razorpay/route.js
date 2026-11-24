@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  applyRazorpayPayment,
+  applyBalancePayment,
+  findOrderForPayment,
+  findOrderForBalanceLink,
+  isAdvanceOrder,
+} from "@/lib/orderPayments";
 
 export async function POST(req) {
   try {
@@ -63,58 +70,24 @@ export async function POST(req) {
 
         const razorpayPaymentId = payment.id;
         const razorpayOrderId = payment.order_id;
-        const internalOrderId = payment.notes?.internal_order_id || payment.notes?.order_id || payment.receipt;
+        const internalOrderId = payment.notes?.internal_order_id || payment.notes?.order_id || null;
 
-        console.log(`[Razorpay Webhook]: Processing payment.captured for payment ${razorpayPaymentId}, order ${razorpayOrderId}, internal order ${internalOrderId}`);
+        console.log(`[Razorpay Webhook]: Processing payment.captured for payment ${razorpayPaymentId}, order ${razorpayOrderId}`);
 
-        if (internalOrderId) {
-          // Fetch order to see if it is already paid
-          const { data: order, error: fetchError } = await supabaseAdmin
-            .from("orders")
-            .select("id, payment_status, order_items(variant_id, quantity)")
-            .eq("id", internalOrderId)
-            .maybeSingle();
+        const order = await findOrderForPayment(supabaseAdmin, { internalOrderId, razorpayOrderId });
+        if (!order) {
+          console.error("[Razorpay Webhook Error]: No matching order for payment", razorpayPaymentId);
+          break;
+        }
+        // A pre-order's balance is paid through a Payment Link (its own Razorpay
+        // order) and handled by the payment_link.paid event, not here.
+        if (order.is_preorder && razorpayOrderId !== order.razorpay_order_id) break;
 
-          if (fetchError) {
-            console.error("[Razorpay Webhook Error]: Failed fetching order details:", fetchError.message);
-            break;
-          }
-
-          if (order && order.payment_status !== "paid") {
-            // Update order status to paid and processing
-            const { error: updateErr } = await supabaseAdmin
-              .from("orders")
-              .update({
-                payment_status: "paid",
-                order_status: "processing",
-                razorpay_payment_id: razorpayPaymentId,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", internalOrderId);
-
-            if (updateErr) {
-              console.error("[Razorpay Webhook Error]: DB update failed for payment.captured:", updateErr.message);
-            } else {
-              console.log(`[Razorpay Webhook]: Order payment status updated to paid and order status to processing.`);
-              
-              // Decrement Stock
-              const orderItems = order.order_items || [];
-              for (const item of orderItems) {
-                if (!item.variant_id) continue;
-                const { data: variant } = await supabaseAdmin
-                  .from("product_variants")
-                  .select("stock_quantity")
-                  .eq("id", item.variant_id)
-                  .maybeSingle();
-                if (variant) {
-                  await supabaseAdmin
-                    .from("product_variants")
-                    .update({ stock_quantity: Math.max(0, variant.stock_quantity - item.quantity) })
-                    .eq("id", item.variant_id);
-                }
-              }
-            }
-          }
+        const applied = await applyRazorpayPayment(supabaseAdmin, order, razorpayPaymentId);
+        if (!applied.ok) {
+          console.error("[Razorpay Webhook Error]: DB update failed for payment.captured:", applied.error);
+        } else if (applied.changed) {
+          console.log(`[Razorpay Webhook]: ${isAdvanceOrder(order) ? "COD advance" : "Payment"} marked paid, order moved to processing.`);
         }
         break;
       }
@@ -124,23 +97,31 @@ export async function POST(req) {
         if (!payment) break;
 
         const razorpayPaymentId = payment.id;
-        const internalOrderId = payment.notes?.internal_order_id || payment.notes?.order_id || payment.receipt;
+        const razorpayOrderId = payment.order_id;
+        const internalOrderId = payment.notes?.internal_order_id || payment.notes?.order_id || null;
         const errorDescription = payment.error_description || "Payment transaction failed";
 
         console.log(`[Razorpay Webhook]: Processing payment.failed for payment ${razorpayPaymentId}, reason: ${errorDescription}`);
 
-        if (internalOrderId) {
-          const { error: updateErr } = await supabaseAdmin
-            .from("orders")
-            .update({
-              payment_status: "failed",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", internalOrderId);
+        const order = await findOrderForPayment(supabaseAdmin, { internalOrderId, razorpayOrderId });
+        if (!order) break;
+        // A failed attempt on the balance link must not touch the advance.
+        if (order.is_preorder && razorpayOrderId !== order.razorpay_order_id) break;
 
-          if (updateErr) {
-            console.error("[Razorpay Webhook Error]: DB update failed for payment.failed:", updateErr.message);
-          }
+        // A COD order's advance failing must not mark the whole COD order as
+        // a failed payment; and a failed attempt never overrides a success.
+        const patch = isAdvanceOrder(order)
+          ? { advance_status: "failed", updated_at: new Date().toISOString() }
+          : { payment_status: "failed", updated_at: new Date().toISOString() };
+        const guardColumn = isAdvanceOrder(order) ? "advance_status" : "payment_status";
+        const { error: updateErr } = await supabaseAdmin
+          .from("orders")
+          .update(patch)
+          .eq("id", order.id)
+          .neq(guardColumn, "paid");
+
+        if (updateErr) {
+          console.error("[Razorpay Webhook Error]: DB update failed for payment.failed:", updateErr.message);
         }
         break;
       }
@@ -150,55 +131,53 @@ export async function POST(req) {
         if (!orderEntity) break;
 
         const razorpayOrderId = orderEntity.id;
-        const internalOrderId = orderEntity.receipt || orderEntity.notes?.internal_order_id || orderEntity.notes?.order_id;
+        const internalOrderId = orderEntity.notes?.internal_order_id || orderEntity.notes?.order_id || null;
+        const razorpayPaymentId = payload?.payment?.entity?.id || null;
 
-        console.log(`[Razorpay Webhook]: Processing order.paid for razorpay order ${razorpayOrderId}, internal order ${internalOrderId}`);
+        console.log(`[Razorpay Webhook]: Processing order.paid for razorpay order ${razorpayOrderId}`);
 
-        if (internalOrderId) {
-          const { data: order, error: fetchError } = await supabaseAdmin
-            .from("orders")
-            .select("id, payment_status, order_items(variant_id, quantity)")
-            .eq("id", internalOrderId)
-            .maybeSingle();
+        const order = await findOrderForPayment(supabaseAdmin, { internalOrderId, razorpayOrderId });
+        if (!order) {
+          console.error("[Razorpay Webhook Error]: No matching order for razorpay order", razorpayOrderId);
+          break;
+        }
+        if (order.is_preorder && razorpayOrderId !== order.razorpay_order_id) break;
 
-          if (fetchError) {
-            console.error("[Razorpay Webhook Error]: Failed fetching order details:", fetchError.message);
-            break;
-          }
+        const applied = await applyRazorpayPayment(supabaseAdmin, order, razorpayPaymentId);
+        if (!applied.ok) {
+          console.error("[Razorpay Webhook Error]: DB update failed for order.paid:", applied.error);
+        } else if (applied.changed) {
+          console.log(`[Razorpay Webhook]: ${isAdvanceOrder(order) ? "COD advance" : "Payment"} marked paid, order moved to processing.`);
+        }
+        break;
+      }
 
-          if (order && order.payment_status !== "paid") {
-            const { error: updateErr } = await supabaseAdmin
-              .from("orders")
-              .update({
-                payment_status: "paid",
-                order_status: "processing",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", internalOrderId);
+      case "payment_link.paid": {
+        const link = payload?.payment_link?.entity;
+        if (!link) break;
 
-            if (updateErr) {
-              console.error("[Razorpay Webhook Error]: DB update failed for order.paid:", updateErr.message);
-            } else {
-              console.log(`[Razorpay Webhook]: Order payment status updated to paid and order status to processing.`);
-              
-              // Decrement Stock
-              const orderItems = order.order_items || [];
-              for (const item of orderItems) {
-                if (!item.variant_id) continue;
-                const { data: variant } = await supabaseAdmin
-                  .from("product_variants")
-                  .select("stock_quantity")
-                  .eq("id", item.variant_id)
-                  .maybeSingle();
-                if (variant) {
-                  await supabaseAdmin
-                    .from("product_variants")
-                    .update({ stock_quantity: Math.max(0, variant.stock_quantity - item.quantity) })
-                    .eq("id", item.variant_id);
-                }
-              }
-            }
-          }
+        const razorpayPaymentId = payload?.payment?.entity?.id || null;
+        const internalOrderId = link.notes?.internal_order_id || null;
+
+        console.log(`[Razorpay Webhook]: Processing payment_link.paid for link ${link.id}`);
+
+        const order = await findOrderForBalanceLink(supabaseAdmin, { linkId: link.id, internalOrderId });
+        if (!order) {
+          console.error("[Razorpay Webhook Error]: No pre-order matches payment link", link.id);
+          break;
+        }
+
+        // Only accept it if the full balance was actually paid (amounts are in paise).
+        if (Number(link.amount_paid) < Math.round(Number(order.balance_amount) * 100)) {
+          console.error("[Razorpay Webhook Error]: Payment link underpaid for order", order.id);
+          break;
+        }
+
+        const applied = await applyBalancePayment(supabaseAdmin, order, razorpayPaymentId);
+        if (!applied.ok) {
+          console.error("[Razorpay Webhook Error]: DB update failed for payment_link.paid:", applied.error);
+        } else if (applied.changed) {
+          console.log("[Razorpay Webhook]: Pre-order balance marked paid — order is fully paid.");
         }
         break;
       }

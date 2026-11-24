@@ -13,7 +13,13 @@ export async function submitReview(productId, rating, reviewText) {
     return { success: false, error: "Please log in to leave a review.", requiresLogin: true };
   }
 
-  if (!rating || rating < 1 || rating > 5) {
+  if (typeof productId !== "string" || productId.length > 64) {
+    return { success: false, error: "Invalid product." };
+  }
+  reviewText = String(reviewText ?? "").trim().slice(0, 2000);
+  rating = Number(rating);
+
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
     return { success: false, error: "Please choose a rating between 1 and 5." };
   }
 

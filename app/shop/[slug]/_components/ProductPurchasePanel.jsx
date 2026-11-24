@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Minus, Plus, ShoppingBag, Truck, MessageSquare, Check, Zap } from "lucide-react";
+import { Eye, Minus, Plus, ShoppingBag, Truck, MessageSquare, Check, Zap, CalendarClock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { whatsappLink } from "@/lib/constants";
+import { preorderInfo, formatDispatchDate } from "@/lib/preorder";
 import { useProductVariant } from "./ProductVariantContext";
 import PincodeChecker from "./PincodeChecker";
 import ShareButton from "./ShareButton";
@@ -35,9 +36,15 @@ export default function ProductPurchasePanel({ product, variants }) {
   const [viewerCount, setViewerCount] = useState(null);
   const [deliveryDate, setDeliveryDate] = useState("");
   const { addToCart, setDrawerOpen } = useCart();
+  const { showToast } = useToast();
 
   const selected = variants.find((v) => v.id === selectedId) || defaultVariant;
-  const inStock = selected && selected.stock_quantity > 0;
+  // A size can be bought if it's in stock, or if it's sold as a pre-order
+  // (pre-order mode, or out of stock with "allow pre-order" on).
+  const variantPurchasable = (v) => v.stock_quantity > 0 || preorderInfo(product, v).isPreorder;
+  const selInfo = selected ? preorderInfo(product, selected) : { isPreorder: false };
+  const inStock = selected && variantPurchasable(selected);
+  const dispatchLabel = formatDispatchDate(selInfo.dispatchDate);
 
   useEffect(() => {
     setViewerCount(getViewerCount());
@@ -60,12 +67,12 @@ export default function ProductPurchasePanel({ product, variants }) {
     // Try to keep same bottle type if possible, otherwise first available for that size
     const currentBottleType = selected.bottle_type || "glass";
     const match = variants.find(
-      (v) => v.variant_name === name && (v.bottle_type || "glass") === currentBottleType && v.stock_quantity > 0
+      (v) => v.variant_name === name && (v.bottle_type || "glass") === currentBottleType && variantPurchasable(v)
     );
     if (match) {
       setSelectedId(match.id);
     } else {
-      const firstAvailable = variants.find((v) => v.variant_name === name && v.stock_quantity > 0);
+      const firstAvailable = variants.find((v) => v.variant_name === name && variantPurchasable(v));
       if (firstAvailable) {
         setSelectedId(firstAvailable.id);
       } else {
@@ -96,17 +103,31 @@ export default function ProductPurchasePanel({ product, variants }) {
     price: selected.price,
     image: selected.image_url || product.featured_image_url || product.images?.[0] || "/placeholder.jpg",
     slug: product.slug,
+    // Display-only hints — the server re-reads all of this from the database.
+    isPreorder: selInfo.isPreorder,
+    advanceAmount: selInfo.advance || 0,
+    dispatchDate: selInfo.dispatchDate || null,
   });
 
   const handleAdd = () => {
     if (!selected || !inStock) return;
-    addToCart(buildCartItem(), quantity);
+    const result = addToCart(buildCartItem(), quantity);
+    if (result?.ok === false) {
+      setDrawerOpen(false);
+      showToast(result.error, "error");
+      return;
+    }
     setDrawerOpen(true);
   };
 
   const handleBuyNow = () => {
     if (!selected || !inStock) return;
-    addToCart(buildCartItem(), quantity);
+    const result = addToCart(buildCartItem(), quantity);
+    if (result?.ok === false) {
+      setDrawerOpen(false);
+      showToast(result.error, "error");
+      return;
+    }
     setDrawerOpen(false);
     router.push("/checkout");
   };
@@ -131,7 +152,32 @@ export default function ProductPurchasePanel({ product, variants }) {
         )}
       </div>
 
-      {viewerCount && (
+      {selInfo.isPreorder && (
+        <div className="space-y-2 rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4">
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${
+              selInfo.kind === "next_batch"
+                ? "border border-amber-400/30 bg-amber-400/10 text-amber-300"
+                : "border border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+            }`}
+          >
+            {selInfo.kind === "next_batch" ? "Pre-Order for Next Batch" : "Pre-Order Open"}
+          </span>
+          {dispatchLabel && (
+            <p className="flex items-center gap-2 text-sm text-ivory/80">
+              <CalendarClock className="h-4 w-4 text-gold-300" />
+              {selInfo.kind === "next_batch" ? "Next dispatch" : "Expected dispatch"}:{" "}
+              <span className="font-semibold text-ivory">{dispatchLabel}</span>
+            </p>
+          )}
+          <p className="text-xs leading-relaxed text-ivory/50">
+            Pay just <span className="font-semibold text-gold-200">₹{selInfo.advance.toLocaleString("en-IN")}</span> per
+            bottle now. The remaining amount is requested by SMS &amp; email when your order is ready to dispatch.
+          </p>
+        </div>
+      )}
+
+      {viewerCount && !selInfo.isPreorder && (
         <div className="inline-flex max-w-full items-center gap-2.5 rounded-2xl border border-gold-400/10 bg-ink-soft/30 px-4 py-3 text-sm font-medium text-ivory/70">
           <Eye className="h-4 w-4 text-gold-300" />
           <span>{viewerCount} people are viewing this right now</span>
@@ -146,7 +192,7 @@ export default function ProductPurchasePanel({ product, variants }) {
         <div className="flex flex-wrap gap-2">
           {sizeNames.map((name) => {
             const optionsForSize = variants.filter((v) => v.variant_name === name);
-            const sizeInStock = optionsForSize.some((v) => v.stock_quantity > 0);
+            const sizeInStock = optionsForSize.some((v) => variantPurchasable(v));
             const isSelected = selected.variant_name === name;
             return (
               <div key={name} className="flex flex-col items-stretch gap-1.5">
@@ -187,7 +233,7 @@ export default function ProductPurchasePanel({ product, variants }) {
             return (
               <div key={v.id} className="flex flex-col items-stretch gap-1.5">
                 <button
-                  disabled={v.stock_quantity <= 0}
+                  disabled={!variantPurchasable(v)}
                   onClick={() => selectBottleType(bottleType)}
                   className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border px-5 py-2.5 text-sm sm:text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                     isSelected
@@ -199,7 +245,7 @@ export default function ProductPurchasePanel({ product, variants }) {
                   {bottleType === "plastic" ? "Plastic Bottle" : "Glass Bottle"}
                   <span className="text-xs opacity-70">₹{v.price.toLocaleString("en-IN")}</span>
                 </button>
-                {v.stock_quantity <= 0 && (
+                {!variantPurchasable(v) && (
                   <span className="w-full rounded-xl border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-center text-[8px] font-semibold uppercase tracking-wider text-red-400">
                     Out of stock
                   </span>
@@ -230,6 +276,20 @@ export default function ProductPurchasePanel({ product, variants }) {
       </div>
 
       {/* Add to Bag + Buy Now CTA */}
+      {selInfo.isPreorder ? (
+        <div className="flex flex-col items-stretch gap-2">
+          <button
+            onClick={handleBuyNow}
+            className="btn-gold flex-1 py-4 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2 animate-shimmer bg-[length:200%_200%] shadow-[0_4px_20px_rgba(212,163,89,0.15)] hover:shadow-[0_4px_28px_rgba(212,163,89,0.3)] hover:-translate-y-0.5 transition-all duration-300"
+          >
+            <CalendarClock className="h-4 w-4 text-ink" /> Pre-Order – ₹{(selInfo.advance * quantity).toLocaleString("en-IN")} Advance
+          </button>
+          <p className="text-center text-xs text-ivory/40">
+            Total ₹{(selected.price * quantity).toLocaleString("en-IN")} · balance ₹
+            {Math.max(0, selected.price * quantity - selInfo.advance * quantity).toLocaleString("en-IN")} when ready
+          </p>
+        </div>
+      ) : (
       <div className="flex flex-col sm:flex-row items-stretch gap-4">
         <button
           onClick={handleAdd}
@@ -246,11 +306,12 @@ export default function ProductPurchasePanel({ product, variants }) {
           <Zap className="h-4 w-4 text-gold-300" /> Buy Now
         </button>
       </div>
+      )}
       <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
         <div className="shrink-0">
           <ShareButton productName={product.name} />
         </div>
-        {deliveryDate && (
+        {deliveryDate && !selInfo.isPreorder && (
           <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-gold-400/10 bg-ink-soft/30 px-3.5 py-2 text-[11px] sm:text-sm text-ivory/70">
             <Truck className="h-3.5 w-3.5 text-gold-300 shrink-0" />
             <span className="whitespace-nowrap">

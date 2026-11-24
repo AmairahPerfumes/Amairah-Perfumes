@@ -13,7 +13,7 @@ export default async function AdminHomePage() {
         <h1 className="font-display text-3xl font-light text-ivory">
           Home <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-200 to-gold-400">Customization</span>
         </h1>
-        <p className="text-sm text-ivory/50 font-light mt-1">Manage the hero banner and every content section on the homepage.</p>
+        <p className="mt-1.5 text-base font-medium text-ivory/65">Manage the hero banner and every content section on the homepage.</p>
       </div>
 
       <HomeCustomizationTabs slides={slides} settings={settings} />

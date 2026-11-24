@@ -3,7 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { validateVariants } from "@/lib/productValidation";
+import { validateVariants, validatePreorder } from "@/lib/productValidation";
+import { requireAdmin } from "@/lib/adminAuth";
 
 function slugify(text) {
   return text
@@ -14,6 +15,7 @@ function slugify(text) {
 }
 
 export async function getAllProductsAdmin() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("products")
@@ -30,6 +32,7 @@ export async function getAllProductsAdmin() {
 }
 
 export async function getProductForEdit(id) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("products")
@@ -98,7 +101,20 @@ function parseProductFields(formData) {
     seo_description: formData.get("seo_description") || null,
     is_active: formData.get("is_active") === "on",
     is_featured: formData.get("is_featured") === "on",
+    preorder_enabled: formData.get("preorder_enabled") === "on",
+    preorder_advance_amount: Math.max(0, Math.round(Number(formData.get("preorder_advance_amount") || 0)) || 0),
+    preorder_dispatch_date: String(formData.get("preorder_dispatch_date") || "").trim() || null,
+    allow_preorder_oos: formData.get("allow_preorder_oos") === "on",
   };
+}
+
+function preorderError(fields) {
+  return validatePreorder({
+    enabled: fields.preorder_enabled,
+    allowOos: fields.allow_preorder_oos,
+    advance: fields.preorder_advance_amount,
+    dispatchDate: fields.preorder_dispatch_date,
+  });
 }
 
 function parseJsonField(formData, key) {
@@ -110,9 +126,12 @@ function parseJsonField(formData, key) {
 }
 
 export async function createProduct(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const fields = parseProductFields(formData);
   if (!fields.name) return { error: "Product name is required." };
+  const preError = preorderError(fields);
+  if (preError) return { error: preError };
 
   const variants = parseJsonField(formData, "variants");
   const variantsError = validateVariants(variants);
@@ -138,10 +157,13 @@ export async function createProduct(_prevState, formData) {
 }
 
 export async function updateProduct(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const id = formData.get("id");
   const fields = parseProductFields(formData);
   if (!id || !fields.name) return { error: "Product name is required." };
+  const preError = preorderError(fields);
+  if (preError) return { error: preError };
 
   const variants = parseJsonField(formData, "variants");
   const variantsError = validateVariants(variants);
@@ -166,6 +188,7 @@ export async function updateProduct(_prevState, formData) {
 }
 
 export async function deleteProduct(id) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) return { success: false, error: error.message };

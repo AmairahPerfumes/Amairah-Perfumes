@@ -1,4 +1,4 @@
-import { Plus_Jakarta_Sans, Jost } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
@@ -9,16 +9,20 @@ import { getQuantityDiscountSettings } from "@/actions/admin/quantityDiscount";
 import { getBundleSettings } from "@/actions/bundle";
 import Script from "next/script";
 
-const display = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+// Fonts are self-hosted (app/fonts) instead of loaded through next/font/google:
+// Google changed its font-file URLs, which made Next's Google loader fail
+// intermittently (and always under Turbopack). Same fonts, same weights, no
+// dependency on Google at build/dev time. Both are variable fonts (OFL licence).
+const display = localFont({
+  src: "./fonts/PlusJakartaSans-latin-variable.woff2",
+  weight: "300 700",
   variable: "--font-display",
   display: "swap",
 });
 
-const body = Jost({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+const body = localFont({
+  src: "./fonts/Jost-latin-variable.woff2",
+  weight: "300 600",
   variable: "--font-body",
   display: "swap",
 });

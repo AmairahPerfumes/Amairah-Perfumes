@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import ProductForm from "../_components/ProductForm";
 import { getAllCategoriesAdmin } from "@/actions/admin/categories";
+import { getNoteSuggestions } from "@/actions/admin/fragranceNotes";
 
 export const metadata = { title: "New Product" };
 
 export default async function NewProductPage() {
-  const categories = await getAllCategoriesAdmin();
+  const [categories, noteSuggestions] = await Promise.all([getAllCategoriesAdmin(), getNoteSuggestions()]);
   return (
     <div>
       <Link
@@ -19,9 +20,9 @@ export default async function NewProductPage() {
         <h1 className="font-display text-3xl sm:text-4xl font-light text-ivory">
           New <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-200 to-gold-400">Product</span>
         </h1>
-        <p className="text-sm text-ivory/50 font-light mt-1">Add a new product to your store.</p>
+        <p className="mt-1.5 text-base font-medium text-ivory/65">Add a new product to your store.</p>
       </div>
-      <ProductForm categories={categories} />
+      <ProductForm categories={categories} noteSuggestions={noteSuggestions} />
     </div>
   );
 }

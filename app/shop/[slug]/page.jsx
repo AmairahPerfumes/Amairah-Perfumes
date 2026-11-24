@@ -11,8 +11,10 @@ import ProductPurchasePanel from "./_components/ProductPurchasePanel";
 import { ProductVariantProvider } from "./_components/ProductVariantContext";
 import ReviewForm from "./_components/ReviewForm";
 import ReviewsList from "./_components/ReviewsList";
-import { getProductBySlug, getRelatedProducts } from "@/actions/products";
+import Image from "next/image";
+import { getProductBySlug, getRelatedProducts, getFragranceNoteImages } from "@/actions/products";
 import Reveal from "@/components/Reveal";
+import { splitNotes, findNoteMatchKey } from "@/lib/fragranceNotes";
 
 // Dedupes the fetch: generateMetadata and the page component both need this
 // product, and without caching each would trigger its own DB round trip.
@@ -55,7 +57,10 @@ export default async function ProductDetailPage({ params }) {
   const product = await getCachedProduct(slug);
   if (!product) notFound();
 
-  const relatedProducts = await getRelatedProducts(product.category_id, product.id);
+  const [relatedProducts, noteImages] = await Promise.all([
+    getRelatedProducts(product.category_id, product.id),
+    getFragranceNoteImages(),
+  ]);
 
   // Map notes with corresponding luxury icons
   const notes = [
@@ -100,6 +105,8 @@ export default async function ProductDetailPage({ params }) {
             price: cheapestVariant.price,
             availability: inStockAny
               ? "https://schema.org/InStock"
+              : product.preorder_enabled || product.allow_preorder_oos
+              ? "https://schema.org/PreOrder"
               : "https://schema.org/OutOfStock",
           },
         }
@@ -200,29 +207,51 @@ export default async function ProductDetailPage({ params }) {
                     <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300 block mb-5">
                       Olfactory Composition
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {notes.map((n, i) => {
+                    <div className="flex flex-col gap-3">
+                      {notes.map((n) => {
                         const NoteIcon = n.icon;
+                        // deeper gold toward the base: a quiet "pyramid" cue
+                        const tier =
+                          n.label === "Top Notes"
+                            ? "border-l-gold-200/70"
+                            : n.label === "Heart Notes"
+                            ? "border-l-gold-400/70"
+                            : "border-l-gold-600/70";
                         return (
                           <div
                             key={n.label}
-                            className="group relative rounded-2xl border border-ink-line bg-ink-soft/30 p-5 sm:p-6 hover:border-gold-400/35 hover:bg-ink-soft/60 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_0_30px_rgba(212,163,89,0.08)] overflow-hidden"
+                            className={`group relative overflow-hidden rounded-2xl border border-ink-line border-l-[3px] ${tier} bg-ink-soft/30 p-4 sm:p-5 transition-colors duration-300 hover:border-gold-400/30 hover:bg-ink-soft/50`}
                           >
-                            <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-[0.02] transition-opacity duration-300 pointer-events-none" />
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold-400/20 bg-gold-400/5 text-gold-300 shadow-[0_0_15px_rgba(212,163,89,0.08)] transition-all duration-300 group-hover:scale-110 group-hover:border-gold-300/50 group-hover:text-gold-200 group-hover:shadow-[0_0_20px_rgba(212,163,89,0.2)]">
-                                <NoteIcon className="w-5 h-5" strokeWidth={1.5} />
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold-400/20 bg-gold-400/5 text-gold-300 shadow-[0_0_15px_rgba(212,163,89,0.08)] transition-colors duration-300 group-hover:border-gold-300/50 group-hover:text-gold-200">
+                                <NoteIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
                               </div>
-                              <p className="text-sm font-semibold uppercase tracking-widest text-gold-200">
-                                {n.label}
-                              </p>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-200">{n.label}</p>
+                                <p className="mt-1 text-sm font-semibold leading-snug text-ivory/70 sm:text-base">{n.desc}</p>
+                              </div>
                             </div>
-                            <p className="text-lg sm:text-xl text-ivory font-medium leading-snug">
-                              {n.value}
-                            </p>
-                            <p className="text-sm text-ivory/45 font-light mt-2 leading-relaxed">
-                              {n.desc}
-                            </p>
+                            <ul className="mt-4 flex flex-wrap gap-2">
+                              {splitNotes(n.value).map((ingredient) => {
+                                const matchKey = findNoteMatchKey(ingredient, (k) => Object.prototype.hasOwnProperty.call(noteImages, k));
+                                const imageUrl = matchKey ? noteImages[matchKey] : null;
+                                return (
+                                  <li
+                                    key={ingredient}
+                                    className="inline-flex items-center gap-2.5 rounded-full border border-gold-400/15 bg-ink/50 py-1 pl-1 pr-4 text-[15px] text-ivory transition-colors duration-300 hover:border-gold-400/40 hover:bg-gold-400/5"
+                                  >
+                                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gold-400/25 bg-gold-400/10">
+                                      {imageUrl ? (
+                                        <Image src={imageUrl} alt="" fill sizes="44px" className="object-cover" />
+                                      ) : (
+                                        <span aria-hidden="true" className="h-2 w-2 rotate-45 bg-gold-400/70" />
+                                      )}
+                                    </span>
+                                    <span className="font-medium leading-tight">{ingredient}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
                           </div>
                         );
                       })}

@@ -2,14 +2,17 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function getAllTestimonials() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase.from("testimonials").select("*").order("display_order", { ascending: true });
   return data || [];
 }
 
 export async function createTestimonial(testimonial) {
+  await requireAdmin();
   const supabase = createAdminClient();
   if (!testimonial.customer_name || !testimonial.review_text) {
     return { success: false, error: "Customer name and review text are required." };
@@ -22,29 +25,34 @@ export async function createTestimonial(testimonial) {
     .limit(1);
   const nextOrder = existing?.[0] ? existing[0].display_order + 1 : 0;
 
-  const { error } = await supabase.from("testimonials").insert({
-    customer_name: testimonial.customer_name,
-    location: testimonial.location || null,
-    review_text: testimonial.review_text,
-    rating: testimonial.rating || 5,
-    image_url: testimonial.image_url || null,
-    display_order: nextOrder,
-  });
+  const { data, error } = await supabase
+    .from("testimonials")
+    .insert({
+      customer_name: testimonial.customer_name,
+      location: testimonial.location || null,
+      review_text: testimonial.review_text,
+      rating: testimonial.rating || 5,
+      image_url: testimonial.image_url || null,
+      display_order: nextOrder,
+    })
+    .select("*")
+    .single();
 
   if (error) return { success: false, error: error.message };
   revalidatePath("/admin/testimonials");
   revalidatePath("/");
   revalidateTag("testimonials");
-  return { success: true };
+  return { success: true, testimonial: data };
 }
 
 export async function updateTestimonial(id, testimonial) {
+  await requireAdmin();
   const supabase = createAdminClient();
   if (!testimonial.customer_name || !testimonial.review_text) {
     return { success: false, error: "Customer name and review text are required." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("testimonials")
     .update({
       customer_name: testimonial.customer_name,
@@ -53,16 +61,19 @@ export async function updateTestimonial(id, testimonial) {
       rating: testimonial.rating || 5,
       image_url: testimonial.image_url || null,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("*")
+    .single();
 
   if (error) return { success: false, error: error.message };
   revalidatePath("/admin/testimonials");
   revalidatePath("/");
   revalidateTag("testimonials");
-  return { success: true };
+  return { success: true, testimonial: data };
 }
 
 export async function toggleTestimonial(id, isActive) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("testimonials").update({ is_active: isActive }).eq("id", id);
   if (error) return { success: false, error: error.message };
@@ -73,6 +84,7 @@ export async function toggleTestimonial(id, isActive) {
 }
 
 export async function deleteTestimonial(id) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("testimonials").delete().eq("id", id);
   if (error) return { success: false, error: error.message };

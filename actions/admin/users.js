@@ -1,15 +1,19 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/adminAuth";
 
 // A Razorpay order only counts as a real sale once payment is confirmed —
 // until then it may still be sitting in checkout or have been abandoned.
 // COD has no online-payment step, so it's always real the moment it's
 // placed. (Duplicated locally — a "use server" file may only export async
 // functions, so this can't be imported from orders.js/dashboard.js.)
-const VISIBLE_ORDERS_FILTER = "payment_method.neq.RAZORPAY,payment_status.eq.paid";
+// A COD order with an advance only counts once the advance is paid (or when
+// there is no advance at all).
+const VISIBLE_ORDERS_FILTER = "and(payment_method.neq.RAZORPAY,advance_status.in.(none,paid)),payment_status.eq.paid,advance_status.eq.paid";
 
 export async function getAllUsers() {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const { data: profiles } = await supabase

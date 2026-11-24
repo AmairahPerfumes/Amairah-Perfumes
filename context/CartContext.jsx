@@ -43,7 +43,17 @@ export function CartProvider({ children }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
   }, [cart, hydrated]);
 
+  // Pre-order items are paid in two steps, so they can't share a bag with
+  // regular items. Returns { ok: false, error } instead of adding when mixed.
   const addToCart = (item, quantity = 1) => {
+    if (cart.length > 0 && Boolean(cart[0].isPreorder) !== Boolean(item.isPreorder)) {
+      return {
+        ok: false,
+        error: item.isPreorder
+          ? "Your bag has regular items. Pre-orders are paid separately — please checkout or clear your bag first."
+          : "Your bag has pre-order items. Please checkout your pre-order first, or clear your bag.",
+      };
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i.variantId === item.variantId);
       if (existing) {
@@ -54,6 +64,7 @@ export function CartProvider({ children }) {
       return [...prev, { ...item, quantity }];
     });
     setDrawerOpen(true);
+    return { ok: true };
   };
 
   const removeFromCart = (variantId) => {

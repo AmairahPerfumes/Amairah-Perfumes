@@ -5,7 +5,11 @@ import { ArrowLeft, Package, MapPin, CreditCard } from "lucide-react";
 import { getOrderById } from "@/actions/admin/orders";
 import OrderStatusManager from "./_components/OrderStatusManager";
 import DelhiveryShipmentManager from "./_components/DelhiveryShipmentManager";
+import ManualShipmentManager from "./_components/ManualShipmentManager";
+import PreorderManager from "./_components/PreorderManager";
+import { getCouriersAdmin } from "@/actions/admin/couriers";
 import BottleGlyph from "@/components/BottleGlyph";
+import { orderAmounts } from "@/lib/orderAmounts";
 
 export const metadata = { title: "Order Detail" };
 
@@ -14,10 +18,11 @@ const panelClass =
 
 export default async function AdminOrderDetailPage({ params }) {
   const { id } = await params;
-  const order = await getOrderById(id);
+  const [order, couriers] = await Promise.all([getOrderById(id), getCouriersAdmin()]);
   if (!order) notFound();
 
   const address = order.addresses;
+  const amounts = orderAmounts(order);
 
   return (
     <div>
@@ -37,7 +42,7 @@ export default async function AdminOrderDetailPage({ params }) {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="min-w-0 space-y-6">
           <div className={panelClass}>
             <div className="flex items-center gap-2">
@@ -103,6 +108,20 @@ export default async function AdminOrderDetailPage({ params }) {
                 <span>Total</span>
                 <span className="text-gold-200">₹{Number(order.total_amount).toLocaleString("en-IN")}</span>
               </div>
+              <div className="mt-2 space-y-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3.5 py-3">
+                <div className="flex justify-between text-ivory/70">
+                  <span>{amounts.paidLabel}</span>
+                  <span className={amounts.paid > 0 ? "font-semibold text-green-300" : "font-semibold text-ivory/50"}>
+                    ₹{amounts.paid.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-gold-400/10 pt-1.5 text-ivory">
+                  <span>{amounts.dueLabel}</span>
+                  <span className={amounts.due > 0 ? "font-semibold text-amber-300" : "font-semibold text-green-300"}>
+                    ₹{amounts.due.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -141,15 +160,46 @@ export default async function AdminOrderDetailPage({ params }) {
           </div>
           <OrderStatusManager order={order} />
           <p className="mt-5 text-sm text-ivory/40">
-            Payment method: <span className="text-ivory/70">{order.payment_method === "COD" ? "Cash on Delivery" : "Online (Razorpay)"}</span>
+            Payment method: <span className="text-ivory/70">{order.is_preorder ? "Pre-Order (Razorpay: advance + balance)" : order.payment_method === "COD" ? "Cash on Delivery" : "Online (Razorpay)"}</span>
           </p>
-          {order.payment_method === "RAZORPAY" && order.razorpay_payment_id && (
+          {order.payment_method === "COD" && !order.is_preorder && Number(order.advance_amount) > 0 && (
+            <div className="mt-4 space-y-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 p-3.5 text-sm">
+              <div className="flex justify-between text-ivory/70">
+                <span>Advance ({order.advance_status})</span>
+                <span className={order.advance_status === "paid" ? "font-semibold text-green-300" : "font-semibold text-amber-300"}>
+                  ₹{Number(order.advance_amount).toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-gold-400/10 pt-1.5 text-ivory">
+                <span>Collect on delivery</span>
+                <span className="font-semibold text-gold-200">
+                  ₹{Math.max(0, Number(order.total_amount) - (order.advance_status === "paid" ? Number(order.advance_amount) : 0)).toLocaleString("en-IN")}
+                </span>
+              </div>
+              {order.advance_status !== "paid" && (
+                <p className="pt-1 text-xs text-amber-300/80">Advance not received yet — don&apos;t ship until it&apos;s paid.</p>
+              )}
+            </div>
+          )}
+          {(order.payment_method === "RAZORPAY" || Number(order.advance_amount) > 0) && order.razorpay_payment_id && (
             <div className="mt-4 border-t border-gold-400/10 pt-4 text-xs">
               <span className="block text-ivory/40 uppercase tracking-wider font-semibold">Razorpay Payment ID</span>
               <span className="font-mono text-ivory/80 select-all">{order.razorpay_payment_id}</span>
             </div>
           )}
-          <DelhiveryShipmentManager order={order} />
+          {order.is_preorder && <PreorderManager order={order} />}
+          {order.is_preorder && Number(order.balance_amount) > 0 && order.balance_status !== "paid" && !order.tracking_number ? (
+            <p className="mt-5 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-200/80">
+              Shipping is locked until the pre-order balance is paid.
+            </p>
+          ) : order.is_manual_shipment ? (
+            <ManualShipmentManager order={order} couriers={couriers} />
+          ) : (
+            <>
+              <DelhiveryShipmentManager order={order} />
+              {!order.tracking_number && <ManualShipmentManager order={order} couriers={couriers} />}
+            </>
+          )}
         </div>
       </div>
     </div>

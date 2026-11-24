@@ -161,7 +161,14 @@ export default function AccountTabs({ profile, orders }) {
                 <li key={order.id} className="card-panel p-5 sm:p-6 hover:border-gold-400/20 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(212,163,89,0.06)] transition-all duration-300">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-display text-lg sm:text-xl text-ivory break-words">{order.order_number}</p>
+                      <p className="font-display text-lg sm:text-xl text-ivory break-words">
+                        {order.order_number}
+                        {order.is_preorder && (
+                          <span className="mt-1.5 block w-fit rounded-full border border-gold-400/30 bg-gold-400/10 px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider text-gold-200">
+                            Pre-Order{order.balance_status === "pending" ? " · Balance due" : ""}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm text-ivory/40 mt-0.5">
                         {new Date(order.created_at).toLocaleDateString("en-IN", {
                           day: "numeric", month: "short", year: "numeric",

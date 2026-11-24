@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { BUNDLE_DEFAULTS } from "@/lib/constants";
+import { requireAdmin } from "@/lib/adminAuth";
 
 function slugify(text) {
   return text
@@ -34,12 +35,14 @@ async function syncBundleImages(supabase, productId, images) {
 }
 
 export async function getBundleSettingsAdmin() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase.from("settings").select("bundle").eq("id", 1).maybeSingle();
   return data?.bundle || BUNDLE_DEFAULTS;
 }
 
 export async function updateBundleSettings(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const enabled = formData.get("enabled") === "on";
@@ -71,6 +74,7 @@ export async function updateBundleSettings(_prevState, formData) {
 }
 
 export async function getBundleItemsAdmin() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("bundle_items")
@@ -108,6 +112,7 @@ export async function getBundleItemsAdmin() {
 // show_in_shop = false so they never surface on /shop, search, or the
 // main admin Products list. They only exist for the bundle picker.
 export async function addBundleItem(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const name = (formData.get("name") || "").trim();
@@ -183,6 +188,7 @@ export async function addBundleItem(_prevState, formData) {
 }
 
 export async function updateBundleItem(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const productId = formData.get("product_id");
@@ -231,6 +237,7 @@ export async function updateBundleItem(_prevState, formData) {
 // the bundle deletes the underlying product outright — product_variants
 // and the bundle_items row both cascade from that delete.
 export async function removeBundleItem(bundleItemId) {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const { data: item } = await supabase

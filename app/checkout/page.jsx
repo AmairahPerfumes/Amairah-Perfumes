@@ -52,6 +52,7 @@ export default async function CheckoutPage() {
             <CheckoutForm
               codEnabled={codEnabled}
               razorpayEnabled={razorpayConfigured && onlinePaymentEnabled}
+              codAdvance={razorpayConfigured && onlinePaymentEnabled && shipping.cod_advance?.enabled ? shipping.cod_advance : null}
               shipping={shipping}
               quantityDiscount={quantityDiscount}
               bundleSettings={bundleSettings}

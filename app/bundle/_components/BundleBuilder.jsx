@@ -243,10 +243,11 @@ export default function BundleBuilder({ products, bottleCount, fixedPrice }) {
   const handleCheckoutBundle = () => {
     if (!isComplete) return;
     const bundleGroupId = `bundle-${Date.now()}`;
+    let blocked = null;
     Object.entries(quantities).forEach(([variantId, qty]) => {
       const p = products.find((prod) => prod.variantId === variantId);
       if (!p || qty <= 0) return;
-      addToCart(
+      const added = addToCart(
         {
           variantId: p.variantId,
           productId: p.productId,
@@ -259,7 +260,12 @@ export default function BundleBuilder({ products, bottleCount, fixedPrice }) {
         },
         qty
       );
+      if (added && added.ok === false) blocked = added.error;
     });
+    if (blocked) {
+      showToast(blocked, "error");
+      return;
+    }
     showToast(`${totalSelected} bottles added — let's checkout!`);
     setQuantities({});
     router.push("/checkout");

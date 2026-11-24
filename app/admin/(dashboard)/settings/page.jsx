@@ -12,7 +12,7 @@ export default async function SettingsPage() {
         <h1 className="font-display text-3xl font-light text-ivory">
           Site <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-200 to-gold-400">Settings</span>
         </h1>
-        <p className="text-sm text-ivory/50 font-light mt-1">Manage contact details, social links, and brand information.</p>
+        <p className="mt-1.5 text-base font-medium text-ivory/65">Manage contact details, social links, and brand information.</p>
       </div>
 
       <SettingsForm initialSettings={settings} />

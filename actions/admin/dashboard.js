@@ -2,6 +2,7 @@
 
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/adminAuth";
 
 // A Razorpay order only counts as a real sale once the webhook (or the
 // post-payment verify call) has flipped it to "paid" — until then the
@@ -9,7 +10,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // COD has no online-payment step, so it's always real the moment it's placed.
 // (Kept as a local literal — this is duplicated from admin/orders.js since a
 // "use server" file may only export async functions.)
-const VISIBLE_ORDERS_FILTER = "payment_method.neq.RAZORPAY,payment_status.eq.paid";
+// A COD order with an advance only counts once the advance is paid (or when
+// there is no advance at all).
+const VISIBLE_ORDERS_FILTER = "and(payment_method.neq.RAZORPAY,advance_status.in.(none,paid)),payment_status.eq.paid,advance_status.eq.paid";
 
 const getDashboardStatsCached = unstable_cache(
   async () => {
@@ -66,6 +69,7 @@ const getDashboardStatsCached = unstable_cache(
 );
 
 export async function getDashboardStats() {
+  await requireAdmin();
   return getDashboardStatsCached();
 }
 
@@ -93,5 +97,6 @@ const getSidebarBadgeCountsCached = unstable_cache(
 );
 
 export async function getSidebarBadgeCounts() {
+  await requireAdmin();
   return getSidebarBadgeCountsCached();
 }

@@ -2,6 +2,7 @@
 
 import { unstable_cache, revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/lib/adminAuth";
 
 // Default settings (fallback if table doesn't exist, and to backfill any
 // keys that don't have a row in the DB yet).
@@ -186,14 +187,27 @@ export async function isOnlinePaymentEnabled() {
 }
 
 export async function updateSiteSetting(key, value) {
+  await requireAdmin();
+
+  // Only the settings this site defines can be written, and values are kept sane.
+  const meta = DEFAULT_SETTINGS[key];
+  if (!meta) return { success: false, error: "Unknown setting." };
+  const text = String(value ?? "");
+  if (text.length > 4000) return { success: false, error: "That value is too long." };
+  // Social links are rendered as clickable links — allow only plain http(s) URLs.
+  if (/^(instagram|facebook|youtube)_url$/.test(key) && text.trim() && !/^https?:\/\/\S+$/i.test(text.trim())) {
+    return { success: false, error: "Links must start with https:// and contain no spaces." };
+  }
+
   try {
     const supabase = createAdminClient();
-    const meta = DEFAULT_SETTINGS[key];
-    const payload = { key, value, updated_at: new Date().toISOString() };
-    if (meta) {
-      payload.category = meta.category;
-      payload.description = meta.description;
-    }
+    const payload = {
+      key,
+      value: text,
+      category: meta.category,
+      description: meta.description,
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase.from("site_settings").upsert(payload, { onConflict: "key" });
 
@@ -202,6 +216,6 @@ export async function updateSiteSetting(key, value) {
     return { success: true };
   } catch (err) {
     console.error("Update site setting error:", err);
-    return { success: false, error: err.message };
+    return { success: false, error: "Could not save the setting." };
   }
 }

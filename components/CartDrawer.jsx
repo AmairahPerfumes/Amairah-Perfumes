@@ -108,6 +108,11 @@ export default function CartDrawer({ quantityDiscount, bundleSettings }) {
                           {item.variantName}
                         </span>
                       )}
+                      {item.isPreorder && (
+                        <span className="ml-2 inline-block rounded-full border border-gold-400/30 bg-gold-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-200">
+                          Pre-Order · ₹{((item.advanceAmount || 0) * item.quantity).toLocaleString("en-IN")} now
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-3 flex items-center justify-between">

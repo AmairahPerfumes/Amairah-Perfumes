@@ -2,8 +2,10 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function getAllReviewsAdmin() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reviews")
@@ -30,6 +32,7 @@ async function recomputeProductRating(supabase, productId) {
 }
 
 export async function approveReview(reviewId) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data: review } = await supabase.from("reviews").select("product_id").eq("id", reviewId).maybeSingle();
   if (!review) return { success: false, error: "Review not found." };
@@ -44,6 +47,7 @@ export async function approveReview(reviewId) {
 }
 
 export async function deleteReview(reviewId) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data: review } = await supabase.from("reviews").select("product_id, is_approved").eq("id", reviewId).maybeSingle();
   if (!review) return { success: false, error: "Review not found." };

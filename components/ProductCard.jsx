@@ -13,8 +13,8 @@ export default function ProductCard({ product }) {
 
   const handleQuickAdd = (e) => {
     e.preventDefault();
-    if (!product.variantId || !product.inStock) return;
-    addToCart({
+    if (!product.variantId || !product.inStock || product.isPreorder) return;
+    const result = addToCart({
       variantId: product.variantId,
       productId: product.id,
       slug: product.slug,
@@ -23,6 +23,10 @@ export default function ProductCard({ product }) {
       price: product.price,
       image: product.image,
     });
+    if (result?.ok === false) {
+      showToast(result.error, "error");
+      return;
+    }
     showToast(`${product.name} added to your bag.`);
   };
 
@@ -50,13 +54,13 @@ export default function ProductCard({ product }) {
           </div>
         )}
 
-        {product.badge && (
+        {(product.isPreorder || product.badge) && (
           <span className="absolute left-3.5 top-3.5 rounded-full bg-gold-gradient px-3 py-1 text-[9px] font-semibold uppercase tracking-wider text-ink shadow-gold">
-            {product.badge}
+            {product.isPreorder ? "Pre-Order" : product.badge}
           </span>
         )}
 
-        {product.variantId && product.inStock && (
+        {product.variantId && product.inStock && !product.isPreorder && (
           <button
             onClick={handleQuickAdd}
             aria-label={`Add ${product.name} to bag`}

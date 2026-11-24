@@ -35,7 +35,7 @@ async function loadOrderForShipping(orderId) {
   const { data: order } = await admin
     .from("orders")
     .select(
-      `id, order_number, user_id, total_amount, payment_method, tracking_number,
+      `id, order_number, user_id, total_amount, payment_method, tracking_number, is_preorder, balance_amount, balance_status,
        addresses ( full_name, phone, address_line_1, address_line_2, city, state, postal_code ),
        order_items ( quantity, product_variants ( weight_grams ) )`
     )
@@ -209,6 +209,12 @@ export async function POST(request) {
         return Response.json({ success: false, error: "This order is already booked with a courier." }, { status: 400 });
       }
       if (!order.addresses) return Response.json({ success: false, error: "Order has no shipping address." }, { status: 400 });
+      if (order.is_preorder && Number(order.balance_amount) > 0 && order.balance_status !== "paid") {
+        return Response.json(
+          { success: false, error: "Balance payment is still pending — dispatch this pre-order after it's paid." },
+          { status: 400 }
+        );
+      }
 
       const weight = weightGrams || estimateWeightGrams(order);
       const result = await createShipment({
@@ -241,13 +247,19 @@ export async function POST(request) {
       if (!orderId) return Response.json({ success: false, error: "orderId is required." }, { status: 400 });
 
       const admin = createAdminClient();
-      let query = admin.from("orders").select("id, user_id, tracking_number").eq("id", orderId);
+      let query = admin.from("orders").select("id, user_id, tracking_number, is_manual_shipment").eq("id", orderId);
       if (!isAdmin) query = query.eq("user_id", user.id);
       const { data: order } = await query.maybeSingle();
 
       if (!order) return Response.json({ success: false, error: "Order not found." }, { status: 404 });
       if (!order.tracking_number) {
         return Response.json({ success: false, error: "This order hasn't shipped yet." }, { status: 404 });
+      }
+
+      // Manually entered shipments (India Post etc.) aren't Delhivery waybills —
+      // never look them up (or overwrite their status) via Delhivery.
+      if (order.is_manual_shipment) {
+        return Response.json({ success: false, error: "Live tracking isn't available for this courier." }, { status: 400 });
       }
 
       const data = await trackShipment(order.tracking_number);

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Eye, Search } from "lucide-react";
 import FilterSelect from "@/components/admin/FilterSelect";
+import { orderAmounts } from "@/lib/orderAmounts";
 
 const STATUS_STYLES = {
   pending: "bg-ivory/10 text-ivory/70 border-ivory/15",
@@ -27,11 +28,19 @@ export default function OrdersList({ orders }) {
   const [payment, setPayment] = useState("all");
   const [search, setSearch] = useState("");
 
+  const tabCounts = useMemo(() => {
+    const c = { all: orders.length };
+    for (const o of orders) c[o.order_status] = (c[o.order_status] || 0) + 1;
+    return c;
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return orders.filter((o) => {
       if (status !== "all" && o.order_status !== status) return false;
-      if (payment !== "all" && (o.payment_method === "COD" ? "cod" : "online") !== payment) return false;
+      if (payment === "preorder") {
+        if (!o.is_preorder) return false;
+      } else if (payment !== "all" && (o.payment_method === "COD" ? "cod" : "online") !== payment) return false;
       if (term) {
         const haystack = [o.order_number, o.profiles?.full_name, o.profiles?.email]
           .filter(Boolean)
@@ -52,25 +61,26 @@ export default function OrdersList({ orders }) {
             <button
               key={t.key}
               onClick={() => setStatus(t.key)}
-              className={`rounded-full border px-4 py-1.5 text-xs font-semibold capitalize transition-colors duration-300 ${
+              className={`rounded-full border px-4 py-2 text-sm font-semibold capitalize transition-colors duration-300 ${
                 status === t.key
                   ? "border-gold-400/30 bg-gold-400/10 text-gold-200"
-                  : "border-gold-400/10 text-ivory/40 hover:text-ivory"
+                  : "border-gold-400/10 text-ivory/50 hover:text-ivory"
               }`}
             >
               {t.label}
+              <span className="ml-2 rounded-full bg-ivory/10 px-1.5 text-xs text-ivory/50">{tabCounts[t.key] || 0}</span>
             </button>
           ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ivory/30" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search order #, name, email..."
+              placeholder="Search orders…"
               className="w-full rounded-xl border border-gold-400/10 bg-ink-soft/40 py-2 pl-9 pr-3 text-sm text-ivory placeholder:text-ivory/30 focus:border-gold-400/30 focus:outline-none sm:w-64"
             />
           </div>
@@ -82,6 +92,7 @@ export default function OrdersList({ orders }) {
               { value: "all", label: "All Payments" },
               { value: "cod", label: "COD" },
               { value: "online", label: "Online" },
+              { value: "preorder", label: "Pre-Orders" },
             ]}
           />
         </div>
@@ -96,7 +107,7 @@ export default function OrdersList({ orders }) {
         {filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-ivory/40">No orders match these filters.</p>
         ) : (
-          <table className="w-full min-w-[720px] text-left border-collapse">
+          <table className="w-full min-w-[900px] text-left border-collapse">
             <thead>
               <tr className="border-b border-gold-400/10 text-xs uppercase tracking-widest text-ivory/40 font-semibold">
                 <th className="pb-4 font-medium pl-2">Order</th>
@@ -112,19 +123,19 @@ export default function OrdersList({ orders }) {
               {filtered.map((o) => (
                 <tr key={o.id} className="group/row transition-colors duration-300 hover:bg-white/[0.01]">
                   <td className="py-4 pr-4 pl-2">
-                    <Link href={`/admin/orders/${o.id}`} className="text-sm font-medium text-ivory group-hover/row:text-gold-200 transition-colors">
+                    <Link href={`/admin/orders/${o.id}`} className="whitespace-nowrap text-sm font-medium text-ivory group-hover/row:text-gold-200 transition-colors">
                       {o.order_number}
                     </Link>
                   </td>
                   <td className="py-4 pr-4 text-sm text-ivory/60">{o.profiles?.full_name || o.profiles?.email || "—"}</td>
-                  <td className="py-4 pr-4 text-sm text-ivory/45">
+                  <td className="whitespace-nowrap py-4 pr-4 text-sm text-ivory/45">
                     {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </td>
-                  <td className="py-4 pr-4 text-sm capitalize text-ivory/60">
-                    {o.payment_method === "COD" ? "COD" : "Online"} · {o.payment_status}
+                  <td className="whitespace-nowrap py-4 pr-4 text-sm capitalize text-ivory/60">
+                    {o.is_preorder ? `Pre-order · ${o.balance_status === "paid" || o.payment_status === "paid" ? "fully paid" : `₹${orderAmounts(o).paid} paid, ₹${orderAmounts(o).due} due`}` : <>{o.payment_method === "COD" ? (Number(o.advance_amount) > 0 ? `COD · ${o.advance_status === "paid" ? `₹${orderAmounts(o).paid} paid, ₹${orderAmounts(o).due} due` : "advance pending"}` : "COD") : "Online"} · {o.payment_status}</>}
                   </td>
-                  <td className="py-4 pr-4 text-sm font-semibold text-ivory">₹{Number(o.total_amount).toLocaleString("en-IN")}</td>
-                  <td className="py-4 pr-4">
+                  <td className="whitespace-nowrap py-4 pr-4 text-sm font-semibold text-ivory">₹{Number(o.total_amount).toLocaleString("en-IN")}</td>
+                  <td className="whitespace-nowrap py-4 pr-4">
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider border capitalize ${STATUS_STYLES[o.order_status] || ""}`}>
                       {o.order_status}
                     </span>
@@ -132,9 +143,9 @@ export default function OrdersList({ orders }) {
                   <td className="py-4 pr-2 text-right">
                     <Link
                       href={`/admin/orders/${o.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-xs font-semibold text-gold-200 transition-all duration-300 hover:border-gold-300/40 hover:bg-gold-400/10"
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-gold-400/15 bg-gold-400/5 px-3 py-2 text-xs font-semibold text-gold-200 transition-all duration-300 hover:border-gold-300/40 hover:bg-gold-400/10"
                     >
-                      <Eye className="h-3.5 w-3.5" /> View Details
+                      <Eye className="h-3.5 w-3.5 shrink-0" /> View Details
                     </Link>
                   </td>
                 </tr>
@@ -166,7 +177,7 @@ export default function OrdersList({ orders }) {
                       {o.order_status}
                     </span>
                     <span className="rounded-full border border-ivory/10 bg-ivory/5 px-2.5 py-1 text-xs font-semibold capitalize text-ivory/50">
-                      {o.payment_method === "COD" ? "COD" : "Online"} · {o.payment_status}
+                      {o.is_preorder ? `Pre-order · ${o.balance_status === "paid" || o.payment_status === "paid" ? "fully paid" : `₹${orderAmounts(o).paid} paid, ₹${orderAmounts(o).due} due`}` : <>{o.payment_method === "COD" ? (Number(o.advance_amount) > 0 ? `COD · ${o.advance_status === "paid" ? `₹${orderAmounts(o).paid} paid, ₹${orderAmounts(o).due} due` : "advance pending"}` : "COD") : "Online"} · {o.payment_status}</>}
                     </span>
                     <span className="ml-auto text-sm text-ivory/30">
                       {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}

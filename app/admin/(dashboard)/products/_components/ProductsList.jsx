@@ -38,14 +38,14 @@ export default function ProductsList({ products }) {
     <div>
       {/* Filters */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative flex-1 sm:max-w-xs">
+        <div className="relative min-w-[13rem] flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ivory/30" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products..."
-            className="w-full rounded-xl border border-gold-400/10 bg-ink-soft/40 py-2 pl-9 pr-3 text-sm text-ivory placeholder:text-ivory/30 focus:border-gold-400/30 focus:outline-none"
+            className="w-full rounded-xl border border-gold-400/10 bg-ink-soft/40 py-2.5 pl-9 pr-3 text-sm text-ivory placeholder:text-ivory/30 focus:border-gold-400/30 focus:outline-none"
           />
         </div>
         <FilterSelect
@@ -77,14 +77,14 @@ export default function ProductsList({ products }) {
         />
       </div>
 
-      <p className="mb-3 text-xs text-ivory/40">
+      <p className="mb-3 text-sm font-medium text-ivory/50">
         Showing {filtered.length} of {products.length} product{products.length === 1 ? "" : "s"}.
       </p>
 
       {/* Table (sm and up) */}
       <div className="hidden overflow-x-auto rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-6 backdrop-blur-md shadow-2xl sm:block md:p-8">
         {filtered.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No products match these filters.</p>
+          <p className="py-12 text-center text-base font-medium text-ivory/45">No products match these filters.</p>
         ) : (
           <table className="w-full min-w-[680px] text-left border-collapse">
             <thead>
@@ -109,7 +109,7 @@ export default function ProductsList({ products }) {
       {/* Card List (mobile only) */}
       <div className="rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-4 backdrop-blur-md shadow-2xl sm:hidden">
         {filtered.length === 0 ? (
-          <p className="py-12 text-center text-sm text-ivory/40">No products match these filters.</p>
+          <p className="py-12 text-center text-base font-medium text-ivory/45">No products match these filters.</p>
         ) : (
           <ul className="space-y-3">
             {filtered.map((p) => (

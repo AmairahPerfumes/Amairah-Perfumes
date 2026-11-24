@@ -4,17 +4,18 @@ import { useState } from "react";
 import Script from "next/script";
 import Link from "next/link";
 import Image from "next/image";
-import { Banknote, CreditCard, CheckCircle2, Minus, Plus } from "lucide-react";
+import { Banknote, CreditCard, CheckCircle2, Minus, Plus, CalendarClock } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { processCheckout, verifyRazorpayPayment, validateCoupon } from "@/actions/checkout";
-import { calculateQuantityDiscount, calculateBundleDiscount, nonBundleCartQuantity } from "@/lib/constants";
+import { formatDispatchDate } from "@/lib/preorder";
+import { calculateQuantityDiscount, calculateBundleDiscount, nonBundleCartQuantity, calculateCodAdvance } from "@/lib/constants";
 
 const inputClass =
   "w-full rounded-2xl border border-gold-400/10 bg-ink/40 px-5 py-4 text-base text-ivory placeholder:text-ivory/20 transition-all duration-500 focus:border-gold-300/50 focus:bg-ink/70 focus:outline-none focus:ring-1 focus:ring-gold-400/20 hover:border-gold-400/20";
 const labelClass = "mb-2 block text-xs font-semibold uppercase tracking-widest text-gold-300/85";
 
-export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, quantityDiscount, bundleSettings }) {
+export default function CheckoutForm({ codEnabled, razorpayEnabled, codAdvance, shipping, quantityDiscount, bundleSettings }) {
   const { cart, cartSubtotal, cartCount, clearCart, updateQuantity } = useCart();
   const { showToast } = useToast();
 
@@ -27,7 +28,13 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
     state: "",
     postalCode: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState(codEnabled ? "COD" : razorpayEnabled ? "RAZORPAY" : null);
+  const [chosenMethod, setPaymentMethod] = useState(codEnabled ? "COD" : razorpayEnabled ? "RAZORPAY" : null);
+
+  // Pre-order items are paid in two steps (advance now via Razorpay, balance
+  // later), so they can't be COD and can't share an order with regular items.
+  const hasPreorder = cart.some((i) => i.isPreorder);
+  const mixedCart = hasPreorder && cart.some((i) => !i.isPreorder);
+  const paymentMethod = hasPreorder ? (razorpayEnabled ? "RAZORPAY" : null) : chosenMethod;
   const [submitting, setSubmitting] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
   const [couponInput, setCouponInput] = useState("");
@@ -42,6 +49,22 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
   const qtyDiscount = calculateQuantityDiscount(nonBundleQty, quantityDiscount);
   const bundleDiscount = calculateBundleDiscount(cart, bundleSettings);
   const total = Math.max(0, cartSubtotal + shippingCost + codCost - couponDiscount - qtyDiscount - bundleDiscount);
+
+  // What a COD order would total (incl. COD fee) and the advance due online
+  // now. Shown on the COD card even before COD is picked; the server
+  // recomputes the real amount.
+  const codTotal = Math.max(0, cartSubtotal + shippingCost + shipping.cod_charge - couponDiscount - qtyDiscount - bundleDiscount);
+  const codAdvanceDue = codAdvance ? calculateCodAdvance(codTotal, codAdvance) : 0;
+  const preorderAdvance = hasPreorder
+    ? Math.min(
+        Math.round(cart.reduce((sum, i) => sum + Math.min((i.advanceAmount || 0) * i.quantity, i.price * i.quantity), 0)),
+        Math.floor(total)
+      )
+    : 0;
+  const preorderDispatch = hasPreorder
+    ? formatDispatchDate(cart.map((i) => i.dispatchDate).filter(Boolean).sort().pop())
+    : null;
+  const advanceDue = hasPreorder ? preorderAdvance : paymentMethod === "COD" ? codAdvanceDue : 0;
 
   const handleApplyCoupon = async () => {
     if (!couponInput) return;
@@ -104,8 +127,17 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
     e.preventDefault();
     if (cart.length === 0) return;
 
+    if (mixedCart) {
+      showToast("Pre-order items must be ordered separately from regular items.", "error");
+      return;
+    }
     if (!paymentMethod) {
-      showToast("No payment method is available right now.", "error");
+      showToast(
+        hasPreorder
+          ? "Pre-orders need online payment, which is unavailable right now."
+          : "No payment method is available right now.",
+        "error"
+      );
       return;
     }
 
@@ -132,6 +164,8 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
     setConfirmedOrder({ orderNumber: result.orderNumber });
   };
 
+  const rupees = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
+
   const openRazorpay = (result) => {
     if (typeof window === "undefined" || !window.Razorpay) {
       showToast("Payment gateway is still loading — please try again in a moment.", "error");
@@ -143,7 +177,11 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
       amount: result.amount,
       currency: "INR",
       name: "Amairah Perfumes",
-      description: `Order ${result.orderNumber}`,
+      description: result.isPreorder
+        ? `Pre-order advance ${result.orderNumber}`
+        : result.isCodAdvance
+        ? `Advance for COD order ${result.orderNumber}`
+        : `Order ${result.orderNumber}`,
       order_id: result.razorpayOrderId,
       handler: async (response) => {
         const verify = await verifyRazorpayPayment(
@@ -155,10 +193,20 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
         );
         if (verify.success) {
           clearCart();
-          setConfirmedOrder({ orderNumber: result.orderNumber, paymentId: verify.razorpayPaymentId });
+          setConfirmedOrder({
+            orderNumber: result.orderNumber,
+            paymentId: verify.razorpayPaymentId,
+            advancePaid: result.isCodAdvance || result.isPreorder ? result.advanceAmount : null,
+            codBalance: result.isCodAdvance || result.isPreorder ? result.codBalance : null,
+            isPreorder: Boolean(result.isPreorder),
+            dispatchDate: result.dispatchDate || null,
+          });
         } else {
           showToast(verify.error || "Payment verification failed.", "error");
         }
+      },
+      modal: {
+        ondismiss: () => showToast("Payment not completed — your order is not confirmed yet.", "error"),
       },
       theme: { color: "#caa14b" },
     });
@@ -188,6 +236,26 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
           <p className="mt-8 text-base sm:text-xl text-ivory/60 font-light max-w-xl mx-auto leading-relaxed">
             Your order <span className="font-semibold text-gold-300">{confirmedOrder.orderNumber}</span> has been placed successfully.
           </p>
+          {confirmedOrder.advancePaid > 0 && confirmedOrder.isPreorder && (
+            <p className="mt-3 text-base text-ivory/60 max-w-xl mx-auto">
+              Pre-order advance of <span className="font-semibold text-gold-300">{rupees(confirmedOrder.advancePaid)}</span> received.
+              {confirmedOrder.codBalance > 0 && (
+                <>
+                  {" "}When your order is ready we&apos;ll send a payment link for the remaining{" "}
+                  <span className="font-semibold text-gold-300">{rupees(confirmedOrder.codBalance)}</span> by SMS &amp; email.
+                </>
+              )}
+              {confirmedOrder.dispatchDate && formatDispatchDate(confirmedOrder.dispatchDate) && (
+                <> Expected dispatch: <span className="font-semibold text-gold-300">{formatDispatchDate(confirmedOrder.dispatchDate)}</span>.</>
+              )}
+            </p>
+          )}
+          {confirmedOrder.advancePaid > 0 && !confirmedOrder.isPreorder && (
+            <p className="mt-3 text-base text-ivory/60">
+              Advance of <span className="font-semibold text-gold-300">{rupees(confirmedOrder.advancePaid)}</span> received.
+              Please keep <span className="font-semibold text-gold-300">{rupees(confirmedOrder.codBalance)}</span> ready to pay on delivery.
+            </p>
+          )}
           {confirmedOrder.paymentId && (
             <p className="mt-3 text-sm text-ivory/40">
               Payment ID: <span className="font-mono text-ivory/60 select-all">{confirmedOrder.paymentId}</span>
@@ -219,7 +287,7 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
 
   return (
     <>
-      {razorpayEnabled && <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />}
+      {(razorpayEnabled || codAdvance) && <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />}
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]">
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -297,7 +365,29 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
 
           <h2 className="pt-4 font-display text-xl sm:text-2xl uppercase tracking-widest text-gold-300/85">Payment Method</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {codEnabled && (
+            {hasPreorder && (
+              <div className="sm:col-span-2 space-y-2 rounded-2xl border border-gold-400/25 bg-gold-400/5 p-5 text-sm text-ivory/70">
+                <p className="flex items-center gap-2 font-semibold text-gold-200">
+                  <CalendarClock className="h-4 w-4" /> Pre-order — pay a small advance now
+                </p>
+                <p>
+                  You pay <span className="font-semibold text-gold-200">₹{preorderAdvance.toLocaleString("en-IN")}</span> now via Razorpay.
+                  The remaining <span className="font-semibold text-ivory">₹{Math.max(0, total - preorderAdvance).toLocaleString("en-IN")}</span> is
+                  requested by SMS &amp; email when your order is ready to dispatch.
+                  {preorderDispatch && <> Expected dispatch: <span className="font-semibold text-ivory">{preorderDispatch}</span>.</>}
+                </p>
+                {mixedCart && (
+                  <p className="font-semibold text-red-300">
+                    Your bag has both pre-order and regular items. Please remove one kind to continue.
+                  </p>
+                )}
+                {!razorpayEnabled && (
+                  <p className="font-semibold text-red-300">Online payment is unavailable right now, so pre-orders can&apos;t be placed.</p>
+                )}
+              </div>
+            )}
+
+            {codEnabled && !hasPreorder && (
               <label
                 className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-5 transition-all duration-500 hover:-translate-y-0.5 ${
                   paymentMethod === "COD"
@@ -325,7 +415,11 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
                     <Banknote className={`h-5 w-5 ${paymentMethod === "COD" ? "text-gold-300" : "text-ivory/40 group-hover:text-gold-300/80"} transition-colors duration-300`} />
                     <span className="font-semibold text-base text-ivory tracking-wide">Cash on Delivery</span>
                   </div>
-                  <p className="text-sm leading-relaxed text-ivory/40 font-light">Pay when your order arrives (₹{shipping.cod_charge} COD fee applies).</p>
+                  <p className="text-sm leading-relaxed text-ivory/40 font-light">
+                    {codAdvanceDue > 0
+                      ? `Pay ₹${codAdvanceDue} advance online now to confirm, and the remaining ₹${Math.max(0, codTotal - codAdvanceDue).toLocaleString("en-IN")} on delivery (₹${shipping.cod_charge} COD fee applies).`
+                      : `Pay when your order arrives (₹${shipping.cod_charge} COD fee applies).`}
+                  </p>
                 </div>
               </label>
             )}
@@ -373,10 +467,14 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
 
           <button
             type="submit"
-            disabled={submitting || !paymentMethod}
+            disabled={submitting || !paymentMethod || mixedCart}
             className="btn-gold group w-full sm:w-fit px-10 py-5 text-sm font-semibold tracking-widest uppercase disabled:opacity-60 shadow-[0_4px_20px_rgba(212,163,89,0.12)] hover:shadow-[0_4px_25px_rgba(212,163,89,0.25)] hover:-translate-y-0.5 transition-all duration-300 mt-4 text-center"
           >
-            {submitting ? "Placing Order…" : `Place Order — ₹${total.toLocaleString("en-IN")}`}
+            {submitting
+              ? "Placing Order…"
+              : advanceDue > 0
+              ? `Pay ₹${advanceDue.toLocaleString("en-IN")} Advance & ${hasPreorder ? "Pre-Order" : "Place Order"}`
+              : `Place Order — ₹${total.toLocaleString("en-IN")}`}
           </button>
         </form>
 
@@ -474,6 +572,18 @@ export default function CheckoutForm({ codEnabled, razorpayEnabled, shipping, qu
               <span className="text-gold-300">Total</span>
               <span className="font-semibold text-gold-200">₹{total.toLocaleString("en-IN")}</span>
             </div>
+            {advanceDue > 0 && (
+              <div className="space-y-1.5 rounded-xl border border-gold-400/15 bg-gold-400/5 px-3.5 py-3 text-sm">
+                <div className="flex justify-between text-ivory/70">
+                  <span>Pay now (advance)</span>
+                  <span className="font-semibold text-gold-200">₹{advanceDue.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex justify-between text-ivory/70">
+                  <span>{hasPreorder ? "Balance (when ready)" : "Pay on delivery"}</span>
+                  <span className="font-semibold text-ivory">₹{Math.max(0, total - advanceDue).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="relative flex flex-col sm:flex-row gap-2 border-t border-gold-400/10 pt-4">

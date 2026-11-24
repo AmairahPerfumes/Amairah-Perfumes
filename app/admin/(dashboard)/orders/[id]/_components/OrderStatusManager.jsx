@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatus, updatePaymentStatus } from "@/actions/admin/orders";
+import FilterSelect from "@/components/admin/FilterSelect";
 
 const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"];
 const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"];
@@ -44,29 +45,25 @@ export default function OrderStatusManager({ order }) {
     <div className="space-y-4">
       <div>
         <label className={labelClass}>Order Status</label>
-        <select
+        <FilterSelect
           defaultValue={order.order_status}
           onChange={handleOrderStatus}
           disabled={pending}
-          className={`${selectClass} ${STATUS_STYLES[order.order_status] || ""}`}
-        >
-          {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s} className="bg-ink capitalize text-ivory">{s}</option>
-          ))}
-        </select>
+          buttonClassName={selectClass}
+          labelClassName={`capitalize ${STATUS_STYLES[order.order_status] || ""}`}
+          options={ORDER_STATUSES.map((s) => ({ value: s, label: <span className="capitalize">{s}</span> }))}
+        />
       </div>
       <div>
         <label className={labelClass}>Payment Status</label>
-        <select
+        <FilterSelect
           defaultValue={order.payment_status}
           onChange={handlePaymentStatus}
           disabled={pending}
-          className={`${selectClass} ${STATUS_STYLES[order.payment_status] || ""}`}
-        >
-          {PAYMENT_STATUSES.map((s) => (
-            <option key={s} value={s} className="bg-ink capitalize text-ivory">{s}</option>
-          ))}
-        </select>
+          buttonClassName={selectClass}
+          labelClassName={`capitalize ${STATUS_STYLES[order.payment_status] || ""}`}
+          options={PAYMENT_STATUSES.map((s) => ({ value: s, label: <span className="capitalize">{s}</span> }))}
+        />
       </div>
       {pending && <p className="text-sm text-gold-300/70">Updating…</p>}
     </div>

@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/adminAuth";
 
 function slugify(text) {
   return text
@@ -13,6 +14,7 @@ function slugify(text) {
 }
 
 export async function getAllCategoriesAdmin() {
+  await requireAdmin();
   const supabase = createAdminClient();
   const [{ data: categories }, { data: products }] = await Promise.all([
     supabase.from("categories").select("*").order("sort_order", { ascending: true }),
@@ -28,12 +30,14 @@ export async function getAllCategoriesAdmin() {
 }
 
 export async function getCategoryById(id) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { data } = await supabase.from("categories").select("*").eq("id", id).maybeSingle();
   return data;
 }
 
 export async function createCategory(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const name = formData.get("name");
   if (!name) return { error: "Name is required." };
@@ -55,6 +59,7 @@ export async function createCategory(_prevState, formData) {
 }
 
 export async function updateCategory(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const id = formData.get("id");
   const name = formData.get("name");
@@ -80,6 +85,7 @@ export async function updateCategory(_prevState, formData) {
 }
 
 export async function deleteCategory(id) {
+  await requireAdmin();
   const supabase = createAdminClient();
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { success: false, error: error.message };

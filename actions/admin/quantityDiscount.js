@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { QUANTITY_DISCOUNT_DEFAULTS } from "@/lib/constants";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export async function getQuantityDiscountSettings() {
   const supabase = createAdminClient();
@@ -11,6 +12,7 @@ export async function getQuantityDiscountSettings() {
 }
 
 export async function updateQuantityDiscountSettings(_prevState, formData) {
+  await requireAdmin();
   const supabase = createAdminClient();
 
   const enabled = formData.get("enabled") === "on";

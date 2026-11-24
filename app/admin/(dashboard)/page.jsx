@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
           <h1 className="font-display text-3xl sm:text-4xl font-light text-ivory">
             Admin <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-200 to-gold-400">Dashboard</span>
           </h1>
-          <p className="text-sm text-ivory/50 font-light mt-1">A snapshot of how the store is doing.</p>
+          <p className="mt-1.5 text-base font-medium text-ivory/65">A snapshot of how the store is doing.</p>
         </div>
       </div>
 
@@ -69,12 +69,12 @@ export default async function AdminDashboardPage() {
               </div>
             </div>
 
-            <p className="mt-3 sm:mt-5 text-[10px] sm:text-xs uppercase tracking-widest text-ivory/40 font-semibold truncate">{c.label}</p>
+            <p className="mt-3 sm:mt-5 text-[11px] sm:text-xs uppercase tracking-widest text-ivory/55 font-semibold truncate">{c.label}</p>
             <p className="mt-1 sm:mt-1.5 font-display text-lg sm:text-3xl leading-none text-ivory font-light group-hover:text-gold-100 transition-colors truncate">
               {c.value}
             </p>
             {c.sub && (
-              <p className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-emerald-400 flex items-center gap-1 font-medium bg-emerald-400/5 px-2 sm:px-2.5 py-1 rounded-full w-fit border border-emerald-400/10 truncate">
+              <p className="mt-2 sm:mt-3 text-xs text-emerald-400 flex items-center gap-1.5 font-semibold bg-emerald-400/5 px-2.5 py-1 rounded-full w-fit border border-emerald-400/10 truncate">
                 <span className="relative flex h-1.5 w-1.5 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -87,10 +87,10 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions + Needs Attention */}
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-6">
           <h2 className="mb-4 font-display text-lg text-ivory">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {QUICK_ACTIONS.map((a) => (
               <Link
                 key={a.href}
@@ -117,7 +117,7 @@ export default async function AdminDashboardPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400/10 text-gold-300">
                   <Star className="h-4 w-4" />
                 </div>
-                <span className="text-sm text-ivory/70 group-hover:text-ivory">Reviews to approve</span>
+                <span className="text-[15px] font-medium text-ivory/75 group-hover:text-ivory">Reviews to approve</span>
               </div>
               <span className="rounded-full bg-gold-400/15 px-2.5 py-1 text-xs font-semibold text-gold-200">
                 {stats.pendingReviewCount}
@@ -132,7 +132,7 @@ export default async function AdminDashboardPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
                   <MessageSquare className="h-4 w-4" />
                 </div>
-                <span className="text-sm text-ivory/70 group-hover:text-ivory">Unresolved inquiries</span>
+                <span className="text-[15px] font-medium text-ivory/75 group-hover:text-ivory">Unresolved inquiries</span>
               </div>
               <span className="rounded-full bg-blue-400/15 px-2.5 py-1 text-xs font-semibold text-blue-300">
                 {stats.unresolvedInquiryCount}
@@ -147,7 +147,7 @@ export default async function AdminDashboardPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-400/10 text-red-300">
                   <ShoppingCart className="h-4 w-4" />
                 </div>
-                <span className="text-sm text-ivory/70 group-hover:text-ivory">Orders pending</span>
+                <span className="text-[15px] font-medium text-ivory/75 group-hover:text-ivory">Orders pending</span>
               </div>
               <span className="rounded-full bg-red-400/15 px-2.5 py-1 text-xs font-semibold text-red-300">
                 {stats.pendingOrders}
@@ -173,7 +173,7 @@ export default async function AdminDashboardPage() {
           </div>
           
           {stats.recentOrders.length === 0 ? (
-            <p className="py-12 text-center text-sm text-ivory/40">No orders yet.</p>
+            <p className="py-12 text-center text-base font-medium text-ivory/45">No orders yet.</p>
           ) : (
             <ul className="divide-y divide-gold-400/5">
               {stats.recentOrders.map((o) => (
@@ -213,7 +213,7 @@ export default async function AdminDashboardPage() {
           </div>
           
           {stats.lowStock.length === 0 ? (
-            <p className="py-6 text-center text-sm text-ivory/40">Everything is well stocked.</p>
+            <p className="py-6 text-center text-base font-medium text-ivory/45">Everything is well stocked.</p>
           ) : (
             <ul className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
               {stats.lowStock.map((v) => (

@@ -3,13 +3,14 @@ import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getProductForEdit } from "@/actions/admin/products";
 import { getAllCategoriesAdmin } from "@/actions/admin/categories";
+import { getNoteSuggestions } from "@/actions/admin/fragranceNotes";
 import ProductForm from "../../_components/ProductForm";
 
 export const metadata = { title: "Edit Product" };
 
 export default async function EditProductPage({ params }) {
   const { id } = await params;
-  const [product, categories] = await Promise.all([getProductForEdit(id), getAllCategoriesAdmin()]);
+  const [product, categories, noteSuggestions] = await Promise.all([getProductForEdit(id), getAllCategoriesAdmin(), getNoteSuggestions()]);
   if (!product) notFound();
 
   return (
@@ -24,9 +25,9 @@ export default async function EditProductPage({ params }) {
         <h1 className="font-display text-3xl sm:text-4xl font-light text-ivory">
           Edit <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-gold-100 via-gold-200 to-gold-400">{product.name}</span>
         </h1>
-        <p className="text-sm text-ivory/50 font-light mt-1">Edit product details, price, and images.</p>
+        <p className="mt-1.5 text-base font-medium text-ivory/65">Edit product details, price, and images.</p>
       </div>
-      <ProductForm product={product} categories={categories} />
+      <ProductForm product={product} categories={categories} noteSuggestions={noteSuggestions} />
     </div>
   );
 }

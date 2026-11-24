@@ -3,10 +3,12 @@
 // Amairah Perfumes - Products Actions (Strict Async Exports Only)
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
+import { preorderInfo } from "@/lib/preorder";
 
 const LISTING_SELECT = `
   id, name, slug, badge, gender, average_rating, review_count,
   featured_image_url, category_id, is_featured, short_description,
+  preorder_enabled, preorder_advance_amount, preorder_dispatch_date, allow_preorder_oos,
   product_images ( image_url, sort_order, variant_name ),
   product_variants ( id, variant_name, bottle_type, price, original_price, stock_quantity, is_active )
 `;
@@ -148,6 +150,8 @@ function withDisplayPrice(product) {
     variantName: cheapest ? `${cheapest.variant_name} (Glass Bottle)` : null,
     inStock: displayedVariantInStock,
     hasAnyStock: activeVariants.some((v) => v.stock_quantity > 0),
+    // Pre-order on the card's displayed size (see lib/preorder.js).
+    isPreorder: cheapest ? preorderInfo(product, cheapest).isPreorder : false,
   };
 }
 
@@ -256,6 +260,7 @@ export async function getProductBySlug(slug) {
         average_rating, review_count, short_description, description,
         notes_top, notes_middle, notes_base, featured_image_url,
         seo_title, seo_description,
+        preorder_enabled, preorder_advance_amount, preorder_dispatch_date, allow_preorder_oos,
         product_images ( id, image_url, sort_order, variant_name ),
         product_variants ( id, variant_name, bottle_type, price, original_price, stock_quantity, is_active ),
         product_faqs ( id, question, answer, display_order )
@@ -323,4 +328,20 @@ export async function getProductBySlug(slug) {
   }
 
   return null;
+}
+
+// Ingredient name (normalized) → image URL, managed at /admin/fragrance-notes.
+// Used by the product page to show an image next to each fragrance note.
+export async function getFragranceNoteImages() {
+  try {
+    const supabase = createPublicClient();
+    const { data } = await supabase.from("fragrance_notes").select("name_key, image_url");
+    const map = {};
+    for (const row of data || []) {
+      if (row.image_url) map[row.name_key] = row.image_url;
+    }
+    return map;
+  } catch {
+    return {};
+  }
 }

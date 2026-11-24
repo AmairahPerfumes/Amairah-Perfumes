@@ -94,8 +94,11 @@ export default function UsersList({ users }) {
               {filtered.map((u) => (
                 <tr key={u.id} className="transition-colors duration-300 hover:bg-white/[0.01]">
                   <td className="py-4 pr-4 pl-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-ivory">{u.full_name || "—"}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold-400/20 bg-gold-400/10 font-display text-sm text-gold-200">
+                        {(u.full_name || u.email || "?").trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-[15px] font-medium text-ivory">{u.full_name || "—"}</span>
                       {u.orderCount > 1 && (
                         <span className="rounded-full border border-gold-400/20 bg-gold-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
                           VIP
@@ -110,7 +113,7 @@ export default function UsersList({ users }) {
                   </td>
                   <td className="py-4 pr-4 text-sm text-ivory/60">
                     <p>{u.email}</p>
-                    {u.phone && <p className="text-ivory/35">{u.phone}</p>}
+                    {u.phone && <p className="text-ivory/50">{u.phone}</p>}
                   </td>
                   <td className="py-4 pr-4 text-sm text-ivory/70">{u.orderCount}</td>
                   <td className="py-4 pr-4 text-sm font-medium text-ivory">₹{u.totalSpend.toLocaleString("en-IN")}</td>
@@ -133,8 +136,11 @@ export default function UsersList({ users }) {
             {filtered.map((u) => (
               <li key={u.id} className="rounded-2xl border border-gold-400/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate text-sm font-medium text-ivory">{u.full_name || "—"}</span>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gold-400/20 bg-gold-400/10 font-display text-sm text-gold-200">
+                      {(u.full_name || u.email || "?").trim().charAt(0).toUpperCase()}
+                    </span>
+                    <span className="truncate text-[15px] font-medium text-ivory">{u.full_name || "—"}</span>
                     {u.orderCount > 1 && (
                       <span className="shrink-0 rounded-full border border-gold-400/20 bg-gold-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-300">
                         VIP

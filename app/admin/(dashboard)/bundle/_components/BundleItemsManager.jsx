@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -10,7 +10,7 @@ import ImageUploader from "@/components/admin/ImageUploader";
 
 const inputClass =
   "w-full rounded-xl border border-gold-400/10 bg-ink/40 px-4 py-2.5 text-base text-ivory transition-colors duration-300 focus:border-gold-400/40 focus:outline-none focus:ring-1 focus:ring-gold-400/20 hover:border-gold-400/20";
-const labelClass = "mb-1.5 block text-sm uppercase tracking-wide text-ivory/50";
+const labelClass = "mb-1.5 block text-[13px] font-semibold uppercase tracking-wide text-ivory/60";
 
 function ProductFields({ defaults, images, setImages }) {
   return (
@@ -29,7 +29,7 @@ function ProductFields({ defaults, images, setImages }) {
           <label className={labelClass}>Description</label>
           <textarea
             name="description"
-            placeholder="Short description shown to customers"
+            placeholder="Short description"
             defaultValue={defaults?.description}
             rows={2}
             className={inputClass}
@@ -37,7 +37,7 @@ function ProductFields({ defaults, images, setImages }) {
         </div>
         <div key="variant_name">
           <label className={labelClass}>Size / Label</label>
-          <input type="text" name="variant_name" placeholder="e.g. 6ml" defaultValue={defaults?.variantName} className={inputClass} />
+          <input type="text" name="variant_name" placeholder="6ml" defaultValue={defaults?.variantName} className={inputClass} />
         </div>
         <div key="stock_quantity">
           <label className={labelClass}>Stock</label>
@@ -54,7 +54,7 @@ function ProductFields({ defaults, images, setImages }) {
             name="original_price"
             min={1}
             defaultValue={defaults?.originalPrice ?? ""}
-            placeholder="e.g. 499"
+            placeholder="499"
             className={inputClass}
           />
         </div>
@@ -180,25 +180,36 @@ function EditItemModal({ item, onDone }) {
 
 function ItemRow({ item }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
+  const [removed, setRemoved] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!window.confirm(`Remove "${item.productName}" from the bundle? This deletes it permanently.`)) return;
     setError("");
-    startTransition(async () => {
+    setPending(true);
+    try {
       const result = await removeBundleItem(item.id);
       if (result?.success === false) {
         setError(result.error || "Failed to remove — please try again.");
-        return;
+      } else {
+        setRemoved(true);
+        router.refresh();
       }
-      router.refresh();
-    });
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setPending(false);
+    }
   };
 
+  if (removed) return null;
+  const stock = item.stock ?? null;
+  const stockTone = stock === null ? "" : stock <= 0 ? "bg-red-500/15 text-red-300" : stock <= 5 ? "bg-amber-400/15 text-amber-200" : "bg-green-500/15 text-green-300";
+
   return (
-    <div className="rounded-xl border border-gold-400/10 bg-ink/20 px-3 py-2.5">
+    <div className="rounded-2xl border border-gold-400/10 bg-white/[0.02] px-4 py-3.5">
       {editing && (
         <EditItemModal
           item={item}
@@ -209,15 +220,18 @@ function ItemRow({ item }) {
         />
       )}
       <div className="flex items-center gap-3">
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-gold-400/10 bg-ink-soft">
-          {item.productImage && <Image src={item.productImage} alt="" fill sizes="44px" className="object-cover" />}
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-gold-400/10 bg-ink-soft">
+          {item.productImage && <Image src={item.productImage} alt="" fill sizes="56px" className="object-cover" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-medium text-ivory">{item.productName}</p>
-          <p className="truncate text-sm text-ivory/50">
-            {item.variantName} {item.price != null && `· ₹${item.price}`}
-            {item.originalPrice != null && <span className="line-through text-ivory/30"> ₹{item.originalPrice}</span>}
-            {item.stock != null && ` · Stock ${item.stock}`}
+          <p className="truncate text-base font-semibold text-ivory">{item.productName}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-ivory/60">
+            <span>{item.variantName}</span>
+            {item.price != null && <span className="text-gold-200">₹{item.price}</span>}
+            {item.originalPrice != null && <span className="line-through text-ivory/35">₹{item.originalPrice}</span>}
+            {stock !== null && (
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockTone}`}>{stock <= 0 ? "Out of stock" : `Stock ${stock}`}</span>
+            )}
           </p>
           {item.productDescription && <p className="truncate text-sm text-ivory/40">{item.productDescription}</p>}
         </div>
@@ -249,18 +263,24 @@ function ItemRow({ item }) {
 export default function BundleItemsManager({ items }) {
   return (
     <div className="space-y-5 rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 p-6 backdrop-blur-md md:p-8">
-      <div className="flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-400/10 text-gold-300">
-          <ListChecks className="h-4 w-4" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-400/10 text-gold-300">
+            <ListChecks className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-display text-lg text-ivory">Bundle products</h2>
+            <p className="mt-0.5 text-sm font-semibold text-ivory/65">The bottles customers can pick from</p>
+          </div>
         </div>
-        <h2 className="font-display text-lg text-ivory">Bundle Products</h2>
+        <span className="shrink-0 rounded-full border border-gold-400/15 bg-gold-400/5 px-3 py-1 text-xs text-ivory/60">{items.length} added</span>
       </div>
 
       <AddItemForm />
 
       <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="py-8 text-center text-base text-ivory/40">No products added yet — add one above.</p>
+          <p className="py-8 text-center text-base font-medium text-ivory/45">No products added yet — add one above.</p>
         ) : (
           items.map((item) => <ItemRow key={item.id} item={item} />)
         )}

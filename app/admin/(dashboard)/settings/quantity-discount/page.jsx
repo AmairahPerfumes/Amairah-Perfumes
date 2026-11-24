@@ -15,8 +15,8 @@ export default async function AdminQuantityDiscountPage() {
             Discount
           </span>
         </h1>
-        <p className="text-sm text-ivory/50 font-light mt-1">
-          Automatic discount based on total cart quantity — applies store-wide, no coupon code required.
+        <p className="mt-1.5 max-w-2xl text-base font-medium text-ivory/65">
+          An automatic discount that grows with the number of bottles in the cart. It applies store-wide — customers don&apos;t need a coupon code.
         </p>
       </div>
       <QuantityDiscountForm settings={settings} />
