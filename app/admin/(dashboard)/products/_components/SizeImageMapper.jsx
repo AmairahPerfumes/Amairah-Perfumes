@@ -89,15 +89,8 @@ export default function SizeImageMapper({ images, onChange, variants, folder = "
           : `These images show only when a shopper selects "${activeTab.label}".`}
       </p>
 
-      {/*
-        `key` forces a full remount when the tab changes. next-cloudinary's
-        CldUploadWidget creates its underlying widget once and never updates
-        its onSuccess callback on prop changes, so without this the widget
-        keeps using whichever tab was active when it was first opened —
-        every later upload (and every "removed" image, since it also
-        replays a stale snapshot of the gallery) would land back on that
-        original tab instead of the one currently selected.
-      */}
+      {/* `key` gives each tab its own uploader, so state (errors, pending
+          files) never carries over from one bottle size to another. */}
       <ImageUploader key={activeTab.key} value={activeUrls} onChange={setActiveUrls} multiple folder={folder} />
     </div>
   );

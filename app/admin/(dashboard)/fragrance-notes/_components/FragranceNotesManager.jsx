@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CldUploadWidget } from "next-cloudinary";
 import { Trash2, Pencil, Droplets, ImageOff, Plus, Search, UploadCloud, ChevronDown, X } from "lucide-react";
 import ImageUploader from "@/components/admin/ImageUploader";
+import { IMAGE_ACCEPT, useImageUpload } from "@/components/admin/useImageUpload";
 import {
   createFragranceNote,
   updateFragranceNote,
@@ -20,6 +20,7 @@ const inputClass =
 const panelClass =
   "rounded-[2rem] border border-gold-400/10 bg-gradient-to-b from-ink-soft/80 to-ink-soft/30 backdrop-blur-md";
 const CHIP_LIMIT = 18;
+const BULK_LIMIT = 30;
 
 // "bergamot_01" / "red-berries" -> "Bergamot 01" / "Red Berries"
 function guessName(filename) {
@@ -107,21 +108,19 @@ function BulkUploader({ lib, onDone }) {
   const [msg, setMsg] = useState(null);
   const idRef = useRef(0);
 
-  const restoreBodyScroll = () => {
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = "";
-      document.body.style.pointerEvents = "";
-      document.documentElement.style.overflow = "";
-    }
+  const { upload, overlay, error: uploadError } = useImageUpload();
+  const inputRef = useRef(null);
+
+  const handleUploaded = (url, file) => {
+    const id = ++idRef.current;
+    setRows((prev) => [...prev, { id, url, name: guessName(file.name) }]);
   };
 
-  // The widget keeps the first onSuccess closure, so only use functional state updates here.
-  const handleSuccess = (result) => {
-    restoreBodyScroll();
-    const url = result?.info?.secure_url;
-    if (!url) return;
-    const id = ++idRef.current;
-    setRows((prev) => [...prev, { id, url, name: guessName(result.info.original_filename) }]);
+  const pickFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length > BULK_LIMIT) setMsg({ type: "error", text: `Only the first ${BULK_LIMIT} images are uploaded at once.` });
+    else setMsg(null);
+    upload(files.slice(0, BULK_LIMIT), "amairah/notes", handleUploaded);
   };
 
   const known = useMemo(() => new Set(lib.map((n) => n.name_key)), [lib]);
@@ -158,29 +157,31 @@ function BulkUploader({ lib, onDone }) {
         Fix any name below, then save. Existing ingredients just get the new image.
       </p>
 
-      <CldUploadWidget
-        signatureEndpoint="/api/cloudinary/sign"
-        options={{
-          folder: "amairah/notes",
-          multiple: true,
-          maxFiles: 30,
-          sources: ["local"],
-          clientAllowedFormats: ["png", "jpg", "jpeg", "webp"],
-          maxFileSize: 3000000,
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          pickFiles(e.dataTransfer.files);
         }}
-        onSuccess={handleSuccess}
-        onClose={restoreBodyScroll}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gold-400/25 py-3 text-sm text-gold-200 transition-colors hover:border-gold-400/50 hover:bg-gold-400/5"
       >
-        {({ open }) => (
-          <button
-            type="button"
-            onClick={() => open()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gold-400/25 py-3 text-sm text-gold-200 transition-colors hover:border-gold-400/50 hover:bg-gold-400/5"
-          >
-            <UploadCloud className="h-4 w-4" /> Choose images
-          </button>
-        )}
-      </CldUploadWidget>
+        <UploadCloud className="h-4 w-4" /> Choose images
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          pickFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      {uploadError && <p className="text-sm font-medium text-red-400">Upload failed — {uploadError}</p>}
+      {overlay}
 
       {rows.length > 0 && (
         <>

@@ -6,8 +6,12 @@ import { isAdminRequest } from "@/lib/adminAuth";
 import { normalizeNoteName, splitNotes, findNoteMatchKey } from "@/lib/fragranceNotes";
 
 const UNAUTHORIZED = { success: false, error: "Not authorized." };
-// Images must come from our own Cloudinary account (uploaded via the signed widget).
-const IMAGE_URL_PREFIX = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""}/`;
+// Images must come from our own ImageKit account (uploaded via the signed uploader).
+const IMAGE_URL_PREFIXES = [
+  process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT && `${process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT.replace(/\/+$/, "")}/amairah/`,
+  // Rows not yet moved to ImageKit. Remove once the database has been switched.
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/`,
+].filter(Boolean);
 const MAX_BULK = 50;
 
 function validate({ name, image_url }) {
@@ -15,7 +19,7 @@ function validate({ name, image_url }) {
   if (!cleanName) return { error: "Ingredient name is required." };
   if (cleanName.length > 60) return { error: "Name must be 60 characters or fewer." };
   if (image_url) {
-    if (typeof image_url !== "string" || image_url.length > 500 || !image_url.startsWith(IMAGE_URL_PREFIX)) {
+    if (typeof image_url !== "string" || image_url.length > 500 || !IMAGE_URL_PREFIXES.some((prefix) => image_url.startsWith(prefix))) {
       return { error: "Image must be uploaded through the uploader." };
     }
   }

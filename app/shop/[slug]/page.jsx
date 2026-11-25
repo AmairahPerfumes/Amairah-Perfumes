@@ -205,7 +205,7 @@ export default async function ProductDetailPage({ params }) {
                 {notes.length > 0 && (
                   <div className="mt-10 sm:mt-12 border-t border-ink-line pt-6 sm:pt-8">
                     <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300 block mb-5">
-                      Olfactory Composition
+                      Perfume Notes
                     </span>
                     <div className="flex flex-col gap-3">
                       {notes.map((n) => {
