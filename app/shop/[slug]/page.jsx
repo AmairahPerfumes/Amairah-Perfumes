@@ -186,25 +186,31 @@ export default async function ProductDetailPage({ params }) {
 
                 <div className="mt-4 flex items-center gap-2.5">
                   <StarRating rating={product.review_count > 0 ? product.average_rating : 0} showValue />
-                  <span className="text-sm text-ivory/40 font-medium">
+                  <span className="text-base sm:text-sm text-ivory/40 font-medium">
                     {product.review_count > 0
                       ? `(${product.review_count} Customer review${product.review_count === 1 ? "" : "s"})`
                       : "No reviews yet"}
                   </span>
                 </div>
 
-                {product.description && (
-                  <p className="mt-6 text-base sm:text-lg leading-relaxed text-ivory/65 font-light whitespace-pre-wrap">{product.description}</p>
-                )}
-
-                <div className="mt-8 border-t border-ink-line pt-8">
+                {/* Price, size, stock and buy buttons come first; the description follows */}
+                <div className="mt-6 sm:mt-8">
                   <ProductPurchasePanel product={safeProduct} variants={safeProduct.variants} />
                 </div>
+
+                {product.description && (
+                  <div className="mt-8 border-t border-ink-line pt-8">
+                    <span className="text-sm sm:text-xs font-semibold uppercase tracking-[0.2em] text-gold-300 block mb-4">
+                      About this fragrance
+                    </span>
+                    <p className="text-[17px] sm:text-lg leading-relaxed text-ivory/70 font-light whitespace-pre-wrap">{product.description}</p>
+                  </div>
+                )}
 
                 {/* Olfactory Scent Pyramid Section */}
                 {notes.length > 0 && (
                   <div className="mt-10 sm:mt-12 border-t border-ink-line pt-6 sm:pt-8">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300 block mb-5">
+                    <span className="text-sm sm:text-xs font-semibold uppercase tracking-[0.2em] text-gold-300 block mb-5">
                       Perfume Notes
                     </span>
                     <div className="flex flex-col gap-3">
@@ -227,8 +233,8 @@ export default async function ProductDetailPage({ params }) {
                                 <NoteIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-200">{n.label}</p>
-                                <p className="mt-1 text-sm font-semibold leading-snug text-ivory/70 sm:text-base">{n.desc}</p>
+                                <p className="text-sm sm:text-xs font-semibold uppercase tracking-[0.18em] text-gold-200">{n.label}</p>
+                                <p className="mt-1 text-base font-semibold leading-snug text-ivory/70">{n.desc}</p>
                               </div>
                             </div>
                             <ul className="mt-4 flex flex-wrap gap-2">
@@ -238,7 +244,7 @@ export default async function ProductDetailPage({ params }) {
                                 return (
                                   <li
                                     key={ingredient}
-                                    className="inline-flex items-center gap-2.5 rounded-full border border-gold-400/15 bg-ink/50 py-1 pl-1 pr-4 text-[15px] text-ivory transition-colors duration-300 hover:border-gold-400/40 hover:bg-gold-400/5"
+                                    className="inline-flex items-center gap-2.5 rounded-full border border-gold-400/15 bg-ink/50 py-1 pl-1 pr-4 text-base sm:text-[15px] text-ivory transition-colors duration-300 hover:border-gold-400/40 hover:bg-gold-400/5"
                                   >
                                     <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gold-400/25 bg-gold-400/10">
                                       {imageUrl ? (
@@ -265,11 +271,11 @@ export default async function ProductDetailPage({ params }) {
           {/* Product Description Section (Full Width) */}
           {product.short_description && (
             <Reveal className="mt-14 sm:mt-24 border-t border-ink-line pt-10 sm:pt-16 max-w-4xl">
-              <p className="eyebrow">
+              <p className="eyebrow text-[13px] sm:text-[11px]">
                 <span className="gold-line" /> The Story
               </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-light text-ivory mt-4 mb-6">Product Details</h2>
-              <p className="text-base sm:text-lg leading-relaxed text-ivory/60 font-light">
+              <h2 className="font-display text-[1.65rem] sm:text-3xl font-light text-ivory mt-4 mb-6">Product Details</h2>
+              <p className="text-[17px] sm:text-lg leading-relaxed text-ivory/75 font-light">
                 {product.short_description}
               </p>
             </Reveal>
@@ -282,35 +288,35 @@ export default async function ProductDetailPage({ params }) {
             <Reveal>
               {product.faqs && product.faqs.length > 0 ? (
                 <div>
-                  <p className="eyebrow">
+                  <p className="eyebrow text-[13px] sm:text-[11px]">
                     <span className="gold-line" /> Need to Know
                   </p>
-                  <h2 className="font-display text-2xl sm:text-3xl font-light text-ivory mt-4 mb-6">Common Questions</h2>
+                  <h2 className="font-display text-[1.65rem] sm:text-3xl font-light text-ivory mt-4 mb-6">Common Questions</h2>
                   <div className="space-y-4">
                     {product.faqs.map((faq) => (
                       <details key={faq.id} className="group overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/30 hover:border-gold-400/30 hover:shadow-[0_0_25px_rgba(212,163,89,0.06)] transition-all duration-300">
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 text-base sm:text-lg font-medium text-ivory hover:bg-ink-soft/60">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 text-[17px] sm:text-lg font-medium text-ivory hover:bg-ink-soft/60">
                           {faq.question}
                           <ChevronDown className="h-4.5 w-4.5 shrink-0 text-gold-300 transition-transform group-open:rotate-180" />
                         </summary>
-                        <p className="px-5 pb-5 text-sm sm:text-base leading-relaxed text-ivory/60 font-light border-t border-ink-line/30 pt-4 animate-fadeUp">{faq.answer}</p>
+                        <p className="px-5 pb-5 text-base leading-relaxed text-ivory/70 font-light border-t border-ink-line/30 pt-4 animate-fadeUp">{faq.answer}</p>
                       </details>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full rounded-[2rem] border border-dashed border-ink-line p-8 text-center text-ivory/40 py-16 bg-ink-soft/10">
-                  <p className="text-base">No FAQs available for this item.</p>
+                <div className="flex flex-col items-center justify-center h-full rounded-[2rem] border border-dashed border-ink-line p-8 text-center text-ivory/55 py-16 bg-ink-soft/10">
+                  <p className="text-lg sm:text-base">No FAQs available for this item.</p>
                 </div>
               )}
             </Reveal>
 
             {/* Right Column: Reviews */}
             <Reveal delay={100} className="space-y-6">
-              <p className="eyebrow">
+              <p className="eyebrow text-[13px] sm:text-[11px]">
                 <span className="gold-line" /> Customer Love
               </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-light text-ivory mt-4 mb-6">Ratings &amp; Reviews</h2>
+              <h2 className="font-display text-[1.65rem] sm:text-3xl font-light text-ivory mt-4 mb-6">Ratings &amp; Reviews</h2>
               <ReviewForm productId={product.id} existingReview={safeProduct.myReview} />
 
               <ReviewsList reviews={safeProduct.reviews} hasOwnReview={!!safeProduct.myReview} />
@@ -321,7 +327,7 @@ export default async function ProductDetailPage({ params }) {
           {/* Related Products */}
           {safeRelatedProducts.length > 0 && (
             <Reveal className="mt-14 sm:mt-24 border-t border-ink-line pt-10 sm:pt-16">
-              <p className="eyebrow">
+              <p className="eyebrow text-[13px] sm:text-[11px]">
                 <span className="gold-line" /> Complementary Selections
               </p>
               <h2 className="font-display text-3xl sm:text-4xl font-light text-ivory mt-4 mb-10">You Might Also Like</h2>

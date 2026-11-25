@@ -54,7 +54,7 @@ export default function ReviewForm({ productId, existingReview }) {
           <p className="text-base text-ivory/70 font-light leading-relaxed">&ldquo;{existingReview.review_text}&rdquo;</p>
         )}
         {!existingReview.is_approved && (
-          <p className="text-sm text-ivory/40">Pending approval — it will appear publicly once our team reviews it.</p>
+          <p className="text-base sm:text-sm text-ivory/55">Pending approval — it will appear publicly once our team reviews it.</p>
         )}
       </div>
     );

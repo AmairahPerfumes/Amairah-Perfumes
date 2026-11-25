@@ -12,7 +12,7 @@ export default function ReviewsList({ reviews, hasOwnReview = false }) {
 
   if (!reviews || reviews.length === 0) {
     return (
-      <p className="text-sm sm:text-base text-ivory/40 font-light">
+      <p className="text-base text-ivory/55 font-light">
         {hasOwnReview ? "No other reviews yet." : "No reviews yet — be the first to share yours."}
       </p>
     );
@@ -31,9 +31,9 @@ export default function ReviewsList({ reviews, hasOwnReview = false }) {
           >
             <div>
               <StarRating rating={r.rating} size={12} />
-              {r.review_text && <p className="mt-3 text-sm sm:text-base text-ivory/70 font-light leading-relaxed">&ldquo;{r.review_text}&rdquo;</p>}
+              {r.review_text && <p className="mt-3 text-base text-ivory/75 font-light leading-relaxed">&ldquo;{r.review_text}&rdquo;</p>}
             </div>
-            <p className="mt-4 text-xs uppercase tracking-wider text-ivory/40 font-semibold">{r.profiles?.full_name || "Amairah Customer"}</p>
+            <p className="mt-4 text-sm sm:text-xs uppercase tracking-wider text-ivory/55 font-semibold">{r.profiles?.full_name || "Amairah Customer"}</p>
           </li>
         ))}
       </ul>

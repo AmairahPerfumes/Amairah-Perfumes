@@ -11,6 +11,9 @@ import { useProductVariant } from "./ProductVariantContext";
 import PincodeChecker from "./PincodeChecker";
 import ShareButton from "./ShareButton";
 
+// At or below this many units, the product page shows the "few in stock" bar.
+const LOW_STOCK_THRESHOLD = 10;
+
 function getEstimatedDeliveryDate() {
   const date = new Date();
   date.setDate(date.getDate() + 5);
@@ -45,6 +48,9 @@ export default function ProductPurchasePanel({ product, variants }) {
   const selInfo = selected ? preorderInfo(product, selected) : { isPreorder: false };
   const inStock = selected && variantPurchasable(selected);
   const dispatchLabel = formatDispatchDate(selInfo.dispatchDate);
+  // Shown for real stock only: 1..LOW_STOCK_THRESHOLD units left, not pre-orders.
+  const lowStock =
+    selected && !selInfo.isPreorder && selected.stock_quantity > 0 && selected.stock_quantity <= LOW_STOCK_THRESHOLD;
 
   useEffect(() => {
     setViewerCount(getViewerCount());
@@ -142,10 +148,10 @@ export default function ProductPurchasePanel({ product, variants }) {
         </span>
         {selected.original_price && selected.original_price > selected.price && (
           <>
-            <span className="text-base text-ivory/40 line-through">
+            <span className="text-lg sm:text-base text-ivory/40 line-through">
               ₹{selected.original_price.toLocaleString("en-IN")}
             </span>
-            <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+            <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-sm sm:text-xs font-semibold text-emerald-400">
               Save {Math.round(((selected.original_price - selected.price) / selected.original_price) * 100)}%
             </span>
           </>
@@ -178,15 +184,38 @@ export default function ProductPurchasePanel({ product, variants }) {
       )}
 
       {viewerCount && !selInfo.isPreorder && (
-        <div className="inline-flex max-w-full items-center gap-2.5 rounded-2xl border border-gold-400/10 bg-ink-soft/30 px-4 py-3 text-sm font-medium text-ivory/70">
+        <div className="inline-flex max-w-full items-center gap-2.5 rounded-2xl border border-gold-400/10 bg-ink-soft/30 px-4 py-3 text-base sm:text-sm font-medium text-ivory/70">
           <Eye className="h-4 w-4 text-gold-300" />
           <span>{viewerCount} people are viewing this right now</span>
         </div>
       )}
 
+      {/* Low-stock nudge, driven by the selected size's inventory */}
+      {lowStock && (
+        <div>
+          <p className="text-lg sm:text-base font-semibold text-red-400">Buy now, few in stock!</p>
+          <div
+            className="mt-2 h-2 w-full overflow-hidden rounded-full bg-ivory/10"
+            role="progressbar"
+            aria-label="Remaining stock"
+            aria-valuemin={0}
+            aria-valuemax={LOW_STOCK_THRESHOLD}
+            aria-valuenow={selected.stock_quantity}
+          >
+            <div
+              className="h-full rounded-full bg-red-500 transition-all duration-500"
+              style={{ width: `${Math.max(8, Math.round((selected.stock_quantity / LOW_STOCK_THRESHOLD) * 100))}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-base sm:text-sm text-ivory/55">
+            Only <span className="font-semibold text-ivory/80">{selected.stock_quantity}</span> left in {selected.variant_name}
+          </p>
+        </div>
+      )}
+
       {/* Size buttons */}
       <div>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-300">
+        <p className="mb-3 text-xs sm:text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-300">
           Select Size
         </p>
         <div className="flex flex-wrap gap-2">
@@ -199,7 +228,7 @@ export default function ProductPurchasePanel({ product, variants }) {
                 <button
                   disabled={!sizeInStock}
                   onClick={() => selectSize(name)}
-                  className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border px-5 py-2.5 text-sm sm:text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border px-5 py-2.5 text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                     isSelected
                       ? "bg-gold-gradient text-ink border-transparent font-semibold shadow-gold/20 scale-[1.02]"
                       : "border-ink-line bg-ink-soft/40 text-ivory/60 hover:border-gold-400/30 hover:text-ivory"
@@ -209,7 +238,7 @@ export default function ProductPurchasePanel({ product, variants }) {
                   {name}
                 </button>
                 {!sizeInStock && (
-                  <span className="w-full rounded-xl border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-center text-[8px] font-semibold uppercase tracking-wider text-red-400">
+                  <span className="w-full rounded-xl border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-center text-[10px] sm:text-[8px] font-semibold uppercase tracking-wider text-red-400">
                     Out of stock
                   </span>
                 )}
@@ -223,7 +252,7 @@ export default function ProductPurchasePanel({ product, variants }) {
       {/* Bottle type — always shown for the selected size; just one button
           (Glass, already selected) when no Plastic alternative exists for it */}
       <div>
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-300">
+        <p className="mb-3 text-xs sm:text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-300">
           Bottle Type
         </p>
         <div className="flex flex-wrap gap-2">
@@ -235,7 +264,7 @@ export default function ProductPurchasePanel({ product, variants }) {
                 <button
                   disabled={!variantPurchasable(v)}
                   onClick={() => selectBottleType(bottleType)}
-                  className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border px-5 py-2.5 text-sm sm:text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border px-5 py-2.5 text-base transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                     isSelected
                       ? "bg-gold-gradient text-ink border-transparent font-semibold shadow-gold/20 scale-[1.02]"
                       : "border-ink-line bg-ink-soft/40 text-ivory/60 hover:border-gold-400/30 hover:text-ivory"
@@ -246,7 +275,7 @@ export default function ProductPurchasePanel({ product, variants }) {
                   <span className="text-xs opacity-70">₹{v.price.toLocaleString("en-IN")}</span>
                 </button>
                 {!variantPurchasable(v) && (
-                  <span className="w-full rounded-xl border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-center text-[8px] font-semibold uppercase tracking-wider text-red-400">
+                  <span className="w-full rounded-xl border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-center text-[10px] sm:text-[8px] font-semibold uppercase tracking-wider text-red-400">
                     Out of stock
                   </span>
                 )}
@@ -265,7 +294,7 @@ export default function ProductPurchasePanel({ product, variants }) {
         >
           <Minus className="h-3.5 w-3.5" />
         </button>
-        <span className="w-8 text-center text-sm font-semibold text-ivory">{quantity}</span>
+        <span className="w-8 text-center text-base font-semibold text-ivory">{quantity}</span>
         <button
           onClick={() => setQuantity((q) => q + 1)}
           className="text-ivory/60 hover:text-gold-200 transition-colors"
@@ -280,7 +309,7 @@ export default function ProductPurchasePanel({ product, variants }) {
         <div className="flex flex-col items-stretch gap-2">
           <button
             onClick={handleBuyNow}
-            className="btn-gold flex-1 py-4 text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2 animate-shimmer bg-[length:200%_200%] shadow-[0_4px_20px_rgba(212,163,89,0.15)] hover:shadow-[0_4px_28px_rgba(212,163,89,0.3)] hover:-translate-y-0.5 transition-all duration-300"
+            className="btn-gold flex-1 py-4 text-sm sm:text-xs font-semibold tracking-widest uppercase flex items-center justify-center gap-2 animate-shimmer bg-[length:200%_200%] shadow-[0_4px_20px_rgba(212,163,89,0.15)] hover:shadow-[0_4px_28px_rgba(212,163,89,0.3)] hover:-translate-y-0.5 transition-all duration-300"
           >
             <CalendarClock className="h-4 w-4 text-ink" /> Pre-Order – ₹{(selInfo.advance * quantity).toLocaleString("en-IN")} Advance
           </button>
@@ -294,26 +323,26 @@ export default function ProductPurchasePanel({ product, variants }) {
         <button
           onClick={handleAdd}
           disabled={!inStock}
-          className="btn-gold flex-1 py-4 text-xs font-semibold tracking-widest uppercase disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2 animate-shimmer bg-[length:200%_200%] shadow-[0_4px_20px_rgba(212,163,89,0.15)] hover:shadow-[0_4px_28px_rgba(212,163,89,0.3)] hover:-translate-y-0.5 transition-all duration-300"
+          className="btn-gold flex-1 py-4 text-sm sm:text-xs font-semibold tracking-widest uppercase disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2 animate-shimmer bg-[length:200%_200%] shadow-[0_4px_20px_rgba(212,163,89,0.15)] hover:shadow-[0_4px_28px_rgba(212,163,89,0.3)] hover:-translate-y-0.5 transition-all duration-300"
         >
           <ShoppingBag className="h-4.5 w-4.5 text-ink" /> Add to Bag
         </button>
         <button
           onClick={handleBuyNow}
           disabled={!inStock}
-          className="btn-outline flex-1 py-4 text-xs font-semibold tracking-widest uppercase disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-gold-400/10 hover:border-gold-300 hover:-translate-y-0.5 transition-all duration-300"
+          className="btn-outline flex-1 py-4 text-sm sm:text-xs font-semibold tracking-widest uppercase disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-gold-400/10 hover:border-gold-300 hover:-translate-y-0.5 transition-all duration-300"
         >
           <Zap className="h-4 w-4 text-gold-300" /> Buy Now
         </button>
       </div>
       )}
-      <div className="flex flex-nowrap items-center gap-2 sm:gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
         <div className="shrink-0">
           <ShareButton productName={product.name} />
         </div>
         {deliveryDate && !selInfo.isPreorder && (
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-gold-400/10 bg-ink-soft/30 px-3.5 py-2 text-[11px] sm:text-sm text-ivory/70">
-            <Truck className="h-3.5 w-3.5 text-gold-300 shrink-0" />
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-gold-400/10 bg-ink-soft/30 px-3.5 py-2 text-xs sm:text-sm text-ivory/75">
+            <Truck className="h-4 w-4 text-gold-300 shrink-0" />
             <span className="whitespace-nowrap">
               Est. Delivery: <span className="font-semibold text-ivory">{deliveryDate}</span>
             </span>
@@ -330,7 +359,7 @@ export default function ProductPurchasePanel({ product, variants }) {
         )}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-2 w-full text-center text-sm text-ivory/40 hover:text-emerald-400 transition-colors py-2.5 border border-dashed border-ink-line/45 rounded-2xl hover:border-emerald-500/25 bg-ink/20"
+        className="inline-flex items-center justify-center gap-2 w-full text-center text-base sm:text-sm text-ivory/55 hover:text-emerald-400 transition-colors py-2.5 border border-dashed border-ink-line/45 rounded-2xl hover:border-emerald-500/25 bg-ink/20"
       >
         <MessageSquare className="w-3.5 h-3.5 text-emerald-500" /> Prefer to order on WhatsApp instead?
       </a>

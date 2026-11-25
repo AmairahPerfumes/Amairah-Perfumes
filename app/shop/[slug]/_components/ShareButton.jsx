@@ -59,7 +59,7 @@ export default function ShareButton({ productName }) {
       <button
         type="button"
         onClick={() => setShareOpen((open) => !open)}
-        className="inline-flex items-center justify-center gap-2 rounded-full border border-gold-400/20 bg-ink-soft/80 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-200 backdrop-blur-md transition-all duration-300 hover:border-gold-300 hover:text-gold-100 hover:scale-105 hover:shadow-[0_0_15px_rgba(212,163,89,0.15)]"
+        className="inline-flex items-center justify-center gap-2 rounded-full border border-gold-400/20 bg-ink-soft/80 px-4 py-2 text-xs sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-200 backdrop-blur-md transition-all duration-300 hover:border-gold-300 hover:text-gold-100 hover:scale-105 hover:shadow-[0_0_15px_rgba(212,163,89,0.15)]"
       >
         <Share2 className="w-3.5 h-3.5 text-gold-300 animate-pulse" />
         <span>Share</span>

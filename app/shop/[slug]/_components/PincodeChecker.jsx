@@ -71,7 +71,7 @@ export default function PincodeChecker() {
     <div className="rounded-2xl border border-gold-400/10 bg-ink-soft/20 p-4 sm:p-5 max-w-md">
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="h-4 w-4 text-gold-300 animate-pulse" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-gold-200">
+        <span className="text-sm sm:text-xs font-semibold uppercase tracking-wider text-gold-200">
           Delivery Availability
         </span>
       </div>
@@ -85,19 +85,19 @@ export default function PincodeChecker() {
             if (status) setStatus(null);
           }}
           placeholder="Enter 6-digit PIN Code"
-          className="flex-1 rounded-xl border border-gold-400/15 bg-ink-soft/40 px-4 py-2.5 text-sm text-ivory placeholder-ivory/30 outline-none transition-colors focus:border-gold-300/40 font-mono"
+          className="flex-1 rounded-xl border border-gold-400/15 bg-ink-soft/40 px-4 py-3 text-base sm:text-sm text-ivory placeholder-ivory/40 outline-none transition-colors focus:border-gold-300/40 font-mono"
         />
         <button
           type="submit"
           disabled={loading || pincode.length !== 6}
-          className="rounded-xl bg-gold-gradient px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-ink transition-opacity hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center min-w-[70px]"
+          className="rounded-xl bg-gold-gradient px-5 py-3 text-sm sm:text-xs font-semibold uppercase tracking-wider text-ink transition-opacity hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center min-w-[70px]"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check"}
         </button>
       </form>
 
       {status === "serviceable" && info && (
-        <div className="mt-3 flex items-center gap-2 text-xs text-emerald-300 animate-[fadeIn_0.2s_ease-out] px-1">
+        <div className="mt-3 flex items-center gap-2 text-sm sm:text-xs text-emerald-300 animate-[fadeIn_0.2s_ease-out] px-1">
           <Check className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>
             Delivery available to <span className="font-semibold text-ivory">{info.district}, {info.state}</span>
@@ -106,7 +106,7 @@ export default function PincodeChecker() {
       )}
 
       {status === "unserviceable" && (
-        <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300 animate-[fadeIn_0.2s_ease-out]">
+        <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm sm:text-xs text-red-300 animate-[fadeIn_0.2s_ease-out]">
           <X className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
           <div>
             <p className="font-semibold text-red-200">Not Serviceable</p>
@@ -118,7 +118,7 @@ export default function PincodeChecker() {
       )}
 
       {status === "error" && info && (
-        <div className="mt-3.5 text-xs text-red-400 px-1 animate-[fadeIn_0.2s_ease-out]">
+        <div className="mt-3.5 text-sm sm:text-xs text-red-400 px-1 animate-[fadeIn_0.2s_ease-out]">
           {info.message}
         </div>
       )}
