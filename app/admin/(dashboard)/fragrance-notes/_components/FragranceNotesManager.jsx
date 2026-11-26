@@ -108,7 +108,7 @@ function BulkUploader({ lib, onDone }) {
   const [msg, setMsg] = useState(null);
   const idRef = useRef(0);
 
-  const { upload, overlay, error: uploadError } = useImageUpload();
+  const { upload, overlay, error: uploadError, note } = useImageUpload();
   const inputRef = useRef(null);
 
   const handleUploaded = (url, file) => {
@@ -181,6 +181,7 @@ function BulkUploader({ lib, onDone }) {
         }}
       />
       {uploadError && <p className="text-sm font-medium text-red-400">Upload failed — {uploadError}</p>}
+      {note && <p className="text-sm font-medium text-green-300">{note}</p>}
       {overlay}
 
       {rows.length > 0 && (

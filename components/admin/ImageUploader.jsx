@@ -22,7 +22,7 @@ export default function ImageUploader({
   showCoverPicker = false,
 }) {
   const urls = multiple ? value || [] : value ? [value] : [];
-  const { upload, overlay, error } = useImageUpload();
+  const { upload, overlay, error, note } = useImageUpload();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
@@ -131,6 +131,7 @@ export default function ImageUploader({
       />
 
       {error && <p className="mt-2 text-sm font-medium text-red-400">Upload failed — {error}</p>}
+      {note && <p className="mt-2 text-sm font-medium text-green-300">{note}</p>}
       {overlay}
     </div>
   );
